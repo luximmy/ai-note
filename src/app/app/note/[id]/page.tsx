@@ -24,7 +24,10 @@ export default async function NotePage({ params }: NotePageProps) {
 
         {/* 核心改动：把原来的占位符替换为真实的 Block 渲染引擎 */}
         <section className='min-h-[500px] border-t pt-8'>
-          <BlockRenderer blocks={note.blocks} />
+          <BlockRenderer
+            blocks={note.blocks}
+            noteId={id}
+          />
         </section>
       </article>
     );

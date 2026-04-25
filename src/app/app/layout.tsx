@@ -3,6 +3,7 @@
 import { useAppStore } from '@/store';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
+import Link from 'next/link';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { isSidebarOpen, isAgentPanelOpen } = useAppStore();
@@ -20,7 +21,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               </div>
               {/* 这里后续会循环渲染 mock 笔记列表 */}
               <div className='px-2 py-1.5 text-sm rounded-md hover:bg-zinc-200/50 cursor-pointer transition-colors'>
-                项目架构思考
+                <Link href='/app/note/doc_001'>项目架构思考</Link>
               </div>
             </div>
           </ScrollArea>
