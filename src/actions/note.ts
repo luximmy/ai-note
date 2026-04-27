@@ -40,15 +40,28 @@ export async function updateBlockAction(
   blockId: string,
   updatedBlock: Partial<Block>,
 ) {
-  // 模拟 500ms 的保存延迟，并调高失败率到 15%，专门为了测试前端的乐观更新回滚逻辑！
   await simulateNetwork(500, 0.15);
 
-  // 这里我们只需要让前端知道“请求成功了”，所以直接返回 true
-  // 未来接入真实 Prisma 时，这里将是真正的 update 语句
+  // 🚀 修复中危：真实修改内存里的数据源，使得 router.refresh() 能读取到最新状态
+  const note = mockDocuments.find((doc) => doc.id === noteId);
+  if (note) {
+    const blockIndex = note.blocks.findIndex((b) => b.id === blockId);
+    if (blockIndex !== -1) {
+      const currentBlock = note.blocks[blockIndex];
+      note.blocks[blockIndex] = {
+        ...currentBlock,
+        ...updatedBlock,
+        attributes: {
+          ...(currentBlock.attributes || {}),
+          ...(updatedBlock.attributes || {}),
+        },
+      } as Block;
+    }
+  }
+
   console.log(
-    `[Mock Server] 成功保存笔记 ${noteId} 中的区块 ${blockId}`,
+    `[Mock Server] 成功持久化保存笔记 ${noteId} 中的区块 ${blockId}`,
     updatedBlock,
   );
-
   return { success: true, timestamp: Date.now() };
 }

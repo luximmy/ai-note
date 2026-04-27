@@ -47,6 +47,18 @@ export const mockDocuments: Document[] = [
           },
         },
       },
+      {
+        id: 'blk_5',
+        type: 'todo',
+        content: '完成 Todo 待办区块的开发与组件接入',
+        attributes: { checked: true },
+      },
+      {
+        id: 'blk_6',
+        type: 'todo',
+        content: '攻克 Generative UI 的数据流向与沙盒渲染',
+        attributes: { checked: false },
+      },
     ],
   },
   {
@@ -79,7 +91,7 @@ export const mockDocuments: Document[] = [
         id: 'blk_2_3',
         type: 'code',
         content:
-          "const [optimisticTodos, addOptimisticTodo] = useOptimistic(todos, (state, next) => [...state, next]);",
+          'const [optimisticTodos, addOptimisticTodo] = useOptimistic(todos, (state, next) => [...state, next]);',
         attributes: {
           language: 'typescript',
           isExecuting: false,

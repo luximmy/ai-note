@@ -15,20 +15,22 @@ import { Block } from '@/types';
 import { ParagraphBlock } from './blocks/ParagraphBlock';
 import { HeadingBlock } from './blocks/HeadingBlock';
 import { CodeBlock } from './blocks/CodeBlock';
+import { TodoBlock } from './blocks/TodoBlock';
 import { updateBlockAction } from '@/actions/note';
-import { useDebouncedCallback } from 'use-debounce';
 
-const BlockRegistry: Record<
-  string,
-  FC<{
-    block: any;
-    onUpdate?: (id: string, content: string) => void;
+type RegistryType = {
+  [K in Block['type']]?: FC<{
+    block: Extract<Block, { type: K }>;
+    onUpdate?: (id: string, updates: Partial<Block>) => void;
     forceSyncToken?: number;
-  }>
-> = {
-  paragraph: ParagraphBlock,
-  heading: HeadingBlock,
-  code: CodeBlock,
+  }>;
+};
+
+const BlockRegistry: RegistryType = {
+  paragraph: ParagraphBlock as any,
+  heading: HeadingBlock as any,
+  code: CodeBlock as any,
+  todo: TodoBlock as any,
 };
 
 export function BlockRenderer({
@@ -40,77 +42,132 @@ export function BlockRenderer({
 }) {
   const router = useRouter();
 
-  // 1. [前台缓冲] 活跃的 UI 状态（用户打字瞬间更新，0延迟反馈）
   const [blocks, setBlocks] = useState<Block[]>(initialBlocks);
-
-  // 2. [后台缓冲] 安全快照点（仅在明确知道服务端已保存成功，或初次加载时更新）
   const [safeSnapshot, setSafeSnapshot] = useState<Block[]>(initialBlocks);
   const safeSnapshotRef = useRef<Block[]>(initialBlocks);
-
-  // 3. 回滚触发器：当它变化时，强迫底层 Tiptap 放弃当前正在输入的内容，与快照对齐
   const [forceSyncToken, setForceSyncToken] = useState(0);
 
-  // 保持 ref 与 state 同步，便于在防抖回调中获取最新快照
+  // 🚀 修复低危：使用 ReturnType<typeof setTimeout> 兼容浏览器环境
+  const timersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  // 🚀 修复高危：建立按 blockId 隔离的“挂起更新缓冲区”，用于合并 800ms 内的多频次、多字段变更
+  const pendingUpdatesRef = useRef<Record<string, Partial<Block>>>({});
+
+  // 🚀 修复中危：组件卸载时的内存与副作用清理
+  useEffect(() => {
+    return () => {
+      // 遍历并清空所有未执行的定时器，防止卸载后依然触发网络请求和状态更新
+      Object.values(timersRef.current).forEach(clearTimeout);
+    };
+  }, []);
+
   useEffect(() => {
     safeSnapshotRef.current = safeSnapshot;
   }, [safeSnapshot]);
 
-  // 服务端推送了新的绝对真理数据（比如发生了 router.refresh()）
   useEffect(() => {
     setBlocks(initialBlocks);
     setSafeSnapshot(initialBlocks);
   }, [initialBlocks]);
 
-  // 核心逻辑：带回滚保护的网络上传管道
-  const debouncedServerUpdate = useDebouncedCallback(
-    async (blockId: string, newContent: string, latestBlocks: Block[]) => {
+  const commitBlockUpdate = useCallback(
+    async (blockId: string, updates: Partial<Block>) => {
       try {
-        const result = await updateBlockAction(noteId, blockId, {
-          content: newContent,
-        });
+        const result = await updateBlockAction(noteId, blockId, updates);
 
         if (result.success) {
-          // 边界保护 E：请求成功，推进安全线
-          console.log(`[🟢 同步成功] 区块 ${blockId} 已落盘`);
-          setSafeSnapshot(latestBlocks);
+          setSafeSnapshot((prev) =>
+            prev.map((b) => {
+              if (b.id === blockId) {
+                return {
+                  ...b,
+                  ...updates,
+                  attributes: {
+                    ...(b.attributes || {}),
+                    ...(updates.attributes || {}),
+                  },
+                } as Block;
+              }
+              return b;
+            }),
+          );
+          console.log(`[🟢 同步成功] 区块 ${blockId} 已落盘`, updates);
         }
       } catch (error) {
-        // 🚨 触发 15% 的模拟异常
-        toast.error('网络异常，内容保存失败', {
-          description: '已为您回滚到上一个安全状态。',
+        toast.error('区块保存失败', {
+          description: '网络抖动，已自动恢复该部分内容。',
           duration: 4000,
         });
 
-        // 边界保护 F：回滚执行
-        // 1. UI 状态回退到安全快照
-        setBlocks(safeSnapshotRef.current);
-        // 2. 发送信号给子组件的 Tiptap，强制它覆盖掉自己内部正在维护的脏文本
+        setBlocks((prevBlocks) => {
+          const safeBlock = safeSnapshotRef.current.find(
+            (b) => b.id === blockId,
+          );
+          if (!safeBlock) return prevBlocks;
+          return prevBlocks.map((b) => (b.id === blockId ? safeBlock : b));
+        });
+
         setForceSyncToken((prev) => prev + 1);
 
-        // 3. 悄悄让 Next.js 重新拉取一次 Server 端数据，确保 100% 对齐
         startTransition(() => {
           router.refresh();
         });
       }
     },
-    800, // 防抖等待时间：用户停止打字 800ms 后才发起网络请求
+    [noteId, router],
   );
 
-  const updateBlockContent = useCallback(
-    (id: string, newContent: string) => {
-      setBlocks((prevBlocks) => {
-        // 更新前台缓冲（UI瞬间响应）
-        const newBlocks = prevBlocks.map((block) =>
-          block.id === id ? { ...block, content: newContent } : block,
-        );
+  const updateBlockData = useCallback(
+    (id: string, updates: Partial<Block>) => {
+      // 1. 0 延迟乐观更新 (UI瞬间响应)
+      setBlocks((prevBlocks) =>
+        prevBlocks.map((block) => {
+          if (block.id === id) {
+            return {
+              ...block,
+              ...updates,
+              attributes: {
+                ...(block.attributes || {}),
+                ...(updates.attributes || {}),
+              },
+            } as Block;
+          }
+          return block;
+        }),
+      );
 
-        // 触发防抖长链
-        debouncedServerUpdate(id, newContent, newBlocks);
+      // 2. 🚀 修复高危：合并缓冲区更新。深度合并本次 updates 与之前的 pending updates
+      const currentPending = pendingUpdatesRef.current[id] || {};
+      const mergedAttributes = {
+        ...(currentPending.attributes || {}),
+        ...(updates.attributes || {}),
+      };
 
-        return newBlocks;
-      });
+      // 🚀 核心修复：在这里加上 as Partial<Block> 告诉 TS 我们确信合并后的结构是合法的
+      pendingUpdatesRef.current[id] = {
+        ...currentPending,
+        ...updates,
+        ...(Object.keys(mergedAttributes).length > 0
+          ? { attributes: mergedAttributes }
+          : {}),
+      } as Partial<Block>;
+
+      // 3. 按 Block ID 独立防抖调度
+      if (timersRef.current[id]) {
+        clearTimeout(timersRef.current[id]);
+      }
+      timersRef.current[id] = setTimeout(() => {
+        // 从缓冲区中取出最终合并好的数据发往服务端
+        const finalUpdates = pendingUpdatesRef.current[id];
+        if (finalUpdates) {
+          commitBlockUpdate(id, finalUpdates);
+        }
+
+        // 提交后清空该 block 的定时器和缓冲区
+        delete timersRef.current[id];
+        delete pendingUpdatesRef.current[id];
+      }, 800);
     },
-    [debouncedServerUpdate],
+    [commitBlockUpdate],
   );
 
   if (!blocks || blocks.length === 0) {
@@ -119,34 +176,18 @@ export function BlockRenderer({
 
   return (
     <div className='space-y-4 pb-32'>
-      {blocks.map((block) => (
-        <BlockNode
-          key={block.id}
-          block={block}
-          onUpdate={updateBlockContent}
-          forceSyncToken={forceSyncToken}
-        />
-      ))}
+      {blocks.map((block) => {
+        const TargetComponent = BlockRegistry[block.type] as React.FC<any>;
+        if (!TargetComponent) return null;
+        return (
+          <TargetComponent
+            key={block.id}
+            block={block}
+            onUpdate={updateBlockData}
+            forceSyncToken={forceSyncToken}
+          />
+        );
+      })}
     </div>
-  );
-}
-
-function BlockNode({
-  block,
-  onUpdate,
-  forceSyncToken,
-}: {
-  block: Block;
-  onUpdate: (id: string, content: string) => void;
-  forceSyncToken?: number;
-}) {
-  const TargetComponent = BlockRegistry[block.type];
-  if (!TargetComponent) return null;
-  return (
-    <TargetComponent
-      block={block}
-      onUpdate={onUpdate}
-      forceSyncToken={forceSyncToken}
-    />
   );
 }
