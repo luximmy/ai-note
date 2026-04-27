@@ -17,6 +17,7 @@ export function RichTextEditor({
   onUpdate,
   forceSyncToken = 0,
 }: RichTextEditorProps) {
+  const isComposingRef = useRef(false);
   const onUpdateRef = useRef(onUpdate);
   const lastAppliedForceTokenRef = useRef(forceSyncToken);
   useEffect(() => {
@@ -41,8 +42,22 @@ export function RichTextEditor({
       attributes: {
         class: 'focus:outline-none min-h-[1.5em] w-full',
       },
+      handleDOMEvents: {
+        compositionstart: () => {
+          isComposingRef.current = true;
+          return false;
+        },
+        compositionend: (_view) => {
+          isComposingRef.current = false;
+          if (editor) {
+            onUpdateRef.current(editor.getText());
+          }
+          return false;
+        },
+      },
     },
     onUpdate: ({ editor }) => {
+      if (isComposingRef.current) return;
       const newContent = editor.getText();
       onUpdateRef.current(newContent);
     },
