@@ -17,15 +17,19 @@ export function RichTextEditor({
   onUpdate,
   forceSyncToken = 0,
 }: RichTextEditorProps) {
+  // 1. 状态锁：用于拦截中文输入法合成阶段
   const isComposingRef = useRef(false);
+  // 2. 最新引用模式：防止闭包陷阱，避免依赖变化导致 Tiptap 重绘
   const onUpdateRef = useRef(onUpdate);
+  // 3. 记录上一次应用的强制同步 Token
   const lastAppliedForceTokenRef = useRef(forceSyncToken);
+
   useEffect(() => {
     onUpdateRef.current = onUpdate;
   }, [onUpdate]);
 
   const editor = useEditor({
-    immediatelyRender: false,
+    immediatelyRender: false, // 避免 SSR 水合报错
     extensions: [
       StarterKit.configure({
         heading: false,
@@ -43,42 +47,52 @@ export function RichTextEditor({
         class: 'focus:outline-none min-h-[1.5em] w-full',
       },
       handleDOMEvents: {
+        // 边界保护 A：中文输入法开始合成，上锁
         compositionstart: () => {
           isComposingRef.current = true;
           return false;
         },
-        compositionend: (_view) => {
+        // 边界保护 B：中文输入法结束合成，解锁并推迟一帧获取最终文本
+        compositionend: () => {
           isComposingRef.current = false;
-          if (editor) {
-            onUpdateRef.current(editor.getText());
-          }
+          // 使用 setTimeout(0) 确保 Tiptap 内部已将拼音转化为最终汉字
+          setTimeout(() => {
+            if (editor) {
+              onUpdateRef.current(editor.getText());
+            }
+          }, 0);
           return false;
         },
       },
     },
     onUpdate: ({ editor }) => {
+      // 如果正在拼音输入中，绝对不要把半成品英文字母轰给外层 React State！
       if (isComposingRef.current) return;
-      const newContent = editor.getText();
-      onUpdateRef.current(newContent);
+      onUpdateRef.current(editor.getText());
     },
   });
 
-  // ✨ 核心修复：监听外部数据的“强制同步”
+  // ✨ 核心修复：监听外部数据的“强制同步”（回滚劫持）
   useEffect(() => {
     if (!editor) return;
 
-    // 获取编辑器当前的纯文本
     const currentEditorContent = editor.getText();
 
-    // 只有当传入的 props 和编辑器内部内容不一致时，才执行同步
-    // 这通常发生在：1. 初始化加载  2. 发生错误导致回滚
+    // 如果外部传入的数据和编辑器当前数据不一致
     if (initialContent !== currentEditorContent) {
       const isForcedSync = forceSyncToken !== lastAppliedForceTokenRef.current;
+
+      // 边界保护 C：正常打字时，忽略外部属性变化（避免光标跳动）
       if (editor.isFocused && !isForcedSync) {
         return;
       }
-      editor.commands.setContent(initialContent);
-      lastAppliedForceTokenRef.current = forceSyncToken;
+
+      // 边界保护 D：仅当触发回滚（Token变更），强制覆盖内部状态
+      if (isForcedSync) {
+        // emitUpdate: false 极其重要！防止 setContent 后再次触发 onUpdate 导致死循环
+        editor.commands.setContent(initialContent, { emitUpdate: false });
+        lastAppliedForceTokenRef.current = forceSyncToken;
+      }
     }
   }, [initialContent, editor, forceSyncToken]);
 
