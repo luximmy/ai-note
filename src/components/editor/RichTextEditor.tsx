@@ -9,13 +9,16 @@ import { useEffect, useRef } from 'react';
 interface RichTextEditorProps {
   initialContent: string;
   onUpdate: (content: string) => void;
+  forceSyncToken?: number;
 }
 
 export function RichTextEditor({
   initialContent,
   onUpdate,
+  forceSyncToken = 0,
 }: RichTextEditorProps) {
   const onUpdateRef = useRef(onUpdate);
+  const lastAppliedForceTokenRef = useRef(forceSyncToken);
   useEffect(() => {
     onUpdateRef.current = onUpdate;
   }, [onUpdate]);
@@ -55,11 +58,14 @@ export function RichTextEditor({
     // 只有当传入的 props 和编辑器内部内容不一致时，才执行同步
     // 这通常发生在：1. 初始化加载  2. 发生错误导致回滚
     if (initialContent !== currentEditorContent) {
-      // 检查当前是否没有焦点，或者这就是一次强制回滚
-      // 避免在用户正常打字时由于延迟导致的“文字闪烁”
+      const isForcedSync = forceSyncToken !== lastAppliedForceTokenRef.current;
+      if (editor.isFocused && !isForcedSync) {
+        return;
+      }
       editor.commands.setContent(initialContent);
+      lastAppliedForceTokenRef.current = forceSyncToken;
     }
-  }, [initialContent, editor]);
+  }, [initialContent, editor, forceSyncToken]);
 
   return <EditorContent editor={editor} />;
 }

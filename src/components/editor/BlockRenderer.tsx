@@ -20,7 +20,11 @@ import { useDebouncedCallback } from 'use-debounce';
 
 const BlockRegistry: Record<
   string,
-  FC<{ block: any; onUpdate?: (id: string, content: string) => void }>
+  FC<{
+    block: any;
+    onUpdate?: (id: string, content: string) => void;
+    forceSyncToken?: number;
+  }>
 > = {
   paragraph: ParagraphBlock,
   heading: HeadingBlock,
@@ -40,6 +44,7 @@ export function BlockRenderer({
   const [blocks, setBlocks] = useState<Block[]>(initialBlocks);
   // 2. 建立一个“安全存档点”（用于保存失败时的回滚）
   const [safeSnapshot, setSafeSnapshot] = useState<Block[]>(initialBlocks);
+  const [forceSyncToken, setForceSyncToken] = useState(0);
   const safeSnapshotRef = useRef<Block[]>(initialBlocks);
 
   useEffect(() => {
@@ -74,6 +79,7 @@ export function BlockRenderer({
 
         // 瞬间将 UI 状态回退到上一个安全存档点
         setBlocks(safeSnapshotRef.current);
+        setForceSyncToken((prev) => prev + 1);
 
         // 通知 Next.js 在后台悄悄重新拉取一次服务器的绝对真理数据，确保对齐
         startTransition(() => {
@@ -112,6 +118,7 @@ export function BlockRenderer({
           key={block.id}
           block={block}
           onUpdate={updateBlockContent}
+          forceSyncToken={forceSyncToken}
         />
       ))}
     </div>
@@ -121,9 +128,11 @@ export function BlockRenderer({
 function BlockNode({
   block,
   onUpdate,
+  forceSyncToken,
 }: {
   block: Block;
   onUpdate: (id: string, content: string) => void;
+  forceSyncToken?: number;
 }) {
   const TargetComponent = BlockRegistry[block.type];
   if (!TargetComponent) return null;
@@ -131,6 +140,7 @@ function BlockNode({
     <TargetComponent
       block={block}
       onUpdate={onUpdate}
+      forceSyncToken={forceSyncToken}
     />
   );
 }

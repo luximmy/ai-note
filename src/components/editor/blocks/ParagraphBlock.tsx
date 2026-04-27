@@ -7,9 +7,11 @@ import { RichTextEditor } from '../RichTextEditor';
 function ParagraphBlockComponent({
   block,
   onUpdate,
+  forceSyncToken,
 }: {
   block: ParagraphBlockType;
   onUpdate?: (id: string, content: string) => void;
+  forceSyncToken?: number;
 }) {
   const handleUpdate = useCallback(
     (newContent: string) => {
@@ -26,6 +28,7 @@ function ParagraphBlockComponent({
       <RichTextEditor
         initialContent={block.content || ''}
         onUpdate={handleUpdate}
+        forceSyncToken={forceSyncToken}
       />
     </div>
   );
