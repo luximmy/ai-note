@@ -1,7 +1,14 @@
 // src/components/editor/BlockRenderer.tsx
 'use client';
 
-import { FC, useCallback, useState, useEffect, startTransition } from 'react';
+import {
+  FC,
+  useCallback,
+  useState,
+  useEffect,
+  startTransition,
+  useRef,
+} from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { Block } from '@/types';
@@ -33,6 +40,11 @@ export function BlockRenderer({
   const [blocks, setBlocks] = useState<Block[]>(initialBlocks);
   // 2. 建立一个“安全存档点”（用于保存失败时的回滚）
   const [safeSnapshot, setSafeSnapshot] = useState<Block[]>(initialBlocks);
+  const safeSnapshotRef = useRef<Block[]>(initialBlocks);
+
+  useEffect(() => {
+    safeSnapshotRef.current = safeSnapshot;
+  }, [safeSnapshot]);
 
   // 当服务端数据真的发生改变时（比如 router.refresh()），同步更新本地状态
   useEffect(() => {
@@ -42,7 +54,7 @@ export function BlockRenderer({
 
   // 3. 真实网络请求（携带回滚快照参数）
   const debouncedServerUpdate = useDebouncedCallback(
-    async (blockId: string, newContent: string, fallbackBlocks: Block[]) => {
+    async (blockId: string, newContent: string, latestBlocks: Block[]) => {
       try {
         const result = await updateBlockAction(noteId, blockId, {
           content: newContent,
@@ -51,7 +63,7 @@ export function BlockRenderer({
         if (result.success) {
           // 保存成功，更新安全存档点
           console.log(`[本地 🟢] 区块 ${blockId} 已稳妥同步至云端`);
-          setSafeSnapshot(blocks);
+          setSafeSnapshot(latestBlocks);
         }
       } catch (error) {
         // 🚨 触发 15% 的异常分支
@@ -61,7 +73,7 @@ export function BlockRenderer({
         });
 
         // 瞬间将 UI 状态回退到上一个安全存档点
-        setBlocks(fallbackBlocks);
+        setBlocks(safeSnapshotRef.current);
 
         // 通知 Next.js 在后台悄悄重新拉取一次服务器的绝对真理数据，确保对齐
         startTransition(() => {
@@ -80,8 +92,8 @@ export function BlockRenderer({
           block.id === id ? { ...block, content: newContent } : block,
         );
 
-        // 动作 B：触发防抖上传，并把当前的 prevBlocks 作为“后悔药”传进去
-        debouncedServerUpdate(id, newContent, prevBlocks);
+        // 动作 B：触发防抖上传，携带最新状态用于成功后刷新快照
+        debouncedServerUpdate(id, newContent, newBlocks);
 
         return newBlocks;
       });
