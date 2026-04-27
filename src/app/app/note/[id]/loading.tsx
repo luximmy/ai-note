@@ -14,6 +14,7 @@ export default function NoteLoading() {
         <div className='h-4 w-full bg-zinc-100 rounded'></div>
         <div className='h-4 w-5/6 bg-zinc-100 rounded'></div>
         <div className='h-4 w-4/6 bg-zinc-100 rounded'></div>
+        <div className='h-32 w-full bg-zinc-100/50 rounded-md mt-6'></div>
       </div>
     </div>
   );

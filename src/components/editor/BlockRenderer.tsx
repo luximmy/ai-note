@@ -118,7 +118,7 @@ export function BlockRenderer({
   }
 
   return (
-    <div className='space-y-4 px-8 py-4'>
+    <div className='space-y-4 pb-32'>
       {blocks.map((block) => (
         <BlockNode
           key={block.id}
