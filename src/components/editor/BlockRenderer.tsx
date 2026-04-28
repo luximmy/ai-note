@@ -18,6 +18,8 @@ import { CodeBlock } from './blocks/CodeBlock';
 import { TodoBlock } from './blocks/TodoBlock';
 import { updateBlockAction } from '@/actions/note';
 
+import { GenerativeUIBlock } from './blocks/GenerativeUIBlock';
+
 type RegistryType = {
   [K in Block['type']]?: FC<{
     block: Extract<Block, { type: K }>;
@@ -31,6 +33,7 @@ const BlockRegistry: RegistryType = {
   heading: HeadingBlock as any,
   code: CodeBlock as any,
   todo: TodoBlock as any,
+  generative_ui: GenerativeUIBlock as any, // 🚀 注册大魔王
 };
 
 export function BlockRenderer({
