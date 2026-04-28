@@ -47,15 +47,16 @@ export function BlockRenderer({
   const safeSnapshotRef = useRef<Block[]>(initialBlocks);
   const [forceSyncToken, setForceSyncToken] = useState(0);
 
-  // 🚀 修复低危：使用 ReturnType<typeof setTimeout> 兼容浏览器环境
   const timersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
-  // 🚀 修复高危：建立按 blockId 隔离的“挂起更新缓冲区”，用于合并 800ms 内的多频次、多字段变更
   const pendingUpdatesRef = useRef<Record<string, Partial<Block>>>({});
 
-  // 🚀 修复中危：组件卸载时的内存与副作用清理
+  // 🚀 核心防线 1：全局递增的请求序号生成器 (发号器)
+  const requestSeqRef = useRef(0);
+  // 🚀 核心防线 2：记录每个区块最后一次成功应用的请求序号 (记录本)
+  const lastResolvedVersionRef = useRef<Record<string, number>>({});
+
   useEffect(() => {
     return () => {
-      // 遍历并清空所有未执行的定时器，防止卸载后依然触发网络请求和状态更新
       Object.values(timersRef.current).forEach(clearTimeout);
     };
   }, []);
@@ -69,12 +70,28 @@ export function BlockRenderer({
     setSafeSnapshot(initialBlocks);
   }, [initialBlocks]);
 
+  // 注意：入参增加了 currentSeq
   const commitBlockUpdate = useCallback(
-    async (blockId: string, updates: Partial<Block>) => {
+    async (blockId: string, updates: Partial<Block>, currentSeq: number) => {
       try {
         const result = await updateBlockAction(noteId, blockId, updates);
 
         if (result.success) {
+          // 🚀 核心防线 3：在等待网络请求这段时间里，检查是否有更新的请求已经完成了？
+          const lastResolved = lastResolvedVersionRef.current[blockId] || 0;
+
+          if (currentSeq < lastResolved) {
+            // 这是一条迟到的旧响应！如果应用它，会把用户刚输入的新内容覆盖掉。
+            console.warn(
+              `[⚠️ 乱序拦截] 区块 ${blockId} 的过期响应 (seq: ${currentSeq}) 已被丢弃，当前最新: ${lastResolved}`,
+            );
+            return; // 💥 直接丢弃，绝对不能推进安全快照！
+          }
+
+          // 如果它是最新的，更新记录本
+          lastResolvedVersionRef.current[blockId] = currentSeq;
+
+          // 推进安全快照
           setSafeSnapshot((prev) =>
             prev.map((b) => {
               if (b.id === blockId) {
@@ -90,7 +107,10 @@ export function BlockRenderer({
               return b;
             }),
           );
-          console.log(`[🟢 同步成功] 区块 ${blockId} 已落盘`, updates);
+          console.log(
+            `[🟢 同步成功] 区块 ${blockId} 已落盘 (seq: ${currentSeq})`,
+            updates,
+          );
         }
       } catch (error) {
         toast.error('区块保存失败', {
@@ -118,7 +138,6 @@ export function BlockRenderer({
 
   const updateBlockData = useCallback(
     (id: string, updates: Partial<Block>) => {
-      // 1. 0 延迟乐观更新 (UI瞬间响应)
       setBlocks((prevBlocks) =>
         prevBlocks.map((block) => {
           if (block.id === id) {
@@ -135,14 +154,12 @@ export function BlockRenderer({
         }),
       );
 
-      // 2. 🚀 修复高危：合并缓冲区更新。深度合并本次 updates 与之前的 pending updates
       const currentPending = pendingUpdatesRef.current[id] || {};
       const mergedAttributes = {
         ...(currentPending.attributes || {}),
         ...(updates.attributes || {}),
       };
 
-      // 🚀 核心修复：在这里加上 as Partial<Block> 告诉 TS 我们确信合并后的结构是合法的
       pendingUpdatesRef.current[id] = {
         ...currentPending,
         ...updates,
@@ -151,18 +168,21 @@ export function BlockRenderer({
           : {}),
       } as Partial<Block>;
 
-      // 3. 按 Block ID 独立防抖调度
       if (timersRef.current[id]) {
         clearTimeout(timersRef.current[id]);
       }
+
       timersRef.current[id] = setTimeout(() => {
-        // 从缓冲区中取出最终合并好的数据发往服务端
         const finalUpdates = pendingUpdatesRef.current[id];
         if (finalUpdates) {
-          commitBlockUpdate(id, finalUpdates);
+          // 🚀 核心防线 4：在发送请求前，生成一个新的序号，并捕获在闭包中
+          requestSeqRef.current += 1;
+          const currentSeq = requestSeqRef.current;
+
+          // 发送时带上这个序号
+          commitBlockUpdate(id, finalUpdates, currentSeq);
         }
 
-        // 提交后清空该 block 的定时器和缓冲区
         delete timersRef.current[id];
         delete pendingUpdatesRef.current[id];
       }, 800);
