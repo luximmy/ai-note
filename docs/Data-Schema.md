@@ -1,3 +1,10 @@
+# 03-Data-Schema
+
+> 状态同步说明（2026-04-29）：当前类型定义以 `src/types/index.ts` 为唯一真源，本文件用于文档化展示，内容已与代码同步。
+
+TypeScript
+
+```ts
 /**
  * ai-note - 核心数据模型契约 (Schema)
  * 作用：定义文档、区块、以及 AI 生成内容的强类型接口
@@ -110,3 +117,12 @@ export interface SearchResultFragment {
   content: string; // Block 的文本内容
   noteTitle: string; // 所属文档标题
 }
+```
+
+## 落地状态核对
+
+- `BlockType` 已包含当前运行时支持的 `paragraph`、`heading`、`code`、`todo`、`generative_ui`，并在渲染层完成注册与展示。
+- `image`、`callout` 暂属于规划区块类型，尚未进入当前运行时 Schema；新增时需同步补齐类型、Mock、渲染组件和测试。
+- `Block` 联合类型已纳入 `GenerativeUIBlock`，与编辑器运行时数据一致。
+- 动态注册表分发处仍保留局部、可审计的类型豁免；AI 组件 props 使用 `unknown` 边界，渲染前需通过白名单、normalize 或降级 UI 兜底。
+- Mock 数据中 `doc_004` 使用了 `componentId: 'AlertCard'`，该组件未注册在 `AIComponentRegistry` 中，会触发未知组件降级 UI（amber 色块）。此为刻意行为，用于验证降级策略。

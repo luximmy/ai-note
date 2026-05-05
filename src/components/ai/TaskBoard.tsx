@@ -7,8 +7,33 @@ interface Task {
   status: 'todo' | 'in-progress' | 'done';
 }
 
-export function TaskBoard({ tasks = [] }: { tasks: Task[] }) {
-  const doneCount = tasks.filter((t) => t.status === 'done').length;
+const taskStatuses = ['todo', 'in-progress', 'done'] as const;
+
+function isTaskStatus(value: unknown): value is Task['status'] {
+  return (
+    typeof value === 'string' && taskStatuses.includes(value as Task['status'])
+  );
+}
+
+function normalizeTasks(value: unknown): Task[] {
+  if (!Array.isArray(value)) return [];
+
+  return value.filter((item): item is Task => {
+    if (!item || typeof item !== 'object') return false;
+
+    const task = item as Partial<Task>;
+    const hasValidId =
+      typeof task.id === 'string' || typeof task.id === 'number';
+
+    return (
+      hasValidId && typeof task.title === 'string' && isTaskStatus(task.status)
+    );
+  });
+}
+
+export function TaskBoard({ tasks }: { tasks?: unknown }) {
+  const normalizedTasks = normalizeTasks(tasks);
+  const doneCount = normalizedTasks.filter((t) => t.status === 'done').length;
 
   return (
     <div className='bg-zinc-50 border border-zinc-200 rounded-xl p-4 my-4 font-sans shadow-sm'>
@@ -17,12 +42,12 @@ export function TaskBoard({ tasks = [] }: { tasks: Task[] }) {
           <span>📋</span> AI 生成任务看板
         </h3>
         <span className='text-xs font-medium text-zinc-500 bg-zinc-200/50 px-2 py-1 rounded-full'>
-          {doneCount} / {tasks.length}
+          {doneCount} / {normalizedTasks.length}
         </span>
       </div>
 
       <div className='space-y-2'>
-        {tasks.map((task) => (
+        {normalizedTasks.map((task) => (
           <div
             key={task.id}
             className={`flex items-start gap-3 p-2.5 rounded-lg transition-colors ${

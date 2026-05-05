@@ -20,20 +20,24 @@ import { updateBlockAction } from '@/actions/note';
 
 import { GenerativeUIBlock } from './blocks/GenerativeUIBlock';
 
+// 🚀 优化：定义统一的组件 Props 接口，供各个 Block 组件继承和校验
+export interface BlockComponentProps<T extends Block> {
+  block: T;
+  onUpdate?: (id: string, updates: Partial<Block>) => void;
+  forceSyncToken?: number;
+}
+
+// 🚀 收敛类型：使用映射类型精确校验每个区块的渲染器，彻底删除这里的 `as any`
 type RegistryType = {
-  [K in Block['type']]?: FC<{
-    block: Extract<Block, { type: K }>;
-    onUpdate?: (id: string, updates: Partial<Block>) => void;
-    forceSyncToken?: number;
-  }>;
+  [K in Block['type']]: FC<BlockComponentProps<Extract<Block, { type: K }>>>;
 };
 
 const BlockRegistry: RegistryType = {
-  paragraph: ParagraphBlock as any,
-  heading: HeadingBlock as any,
-  code: CodeBlock as any,
-  todo: TodoBlock as any,
-  generative_ui: GenerativeUIBlock as any, // 🚀 注册大魔王
+  paragraph: ParagraphBlock,
+  heading: HeadingBlock,
+  code: CodeBlock,
+  todo: TodoBlock,
+  generative_ui: GenerativeUIBlock,
 };
 
 export function BlockRenderer({
@@ -200,8 +204,15 @@ export function BlockRenderer({
   return (
     <div className='space-y-4 pb-32'>
       {blocks.map((block) => {
-        const TargetComponent = BlockRegistry[block.type] as React.FC<any>;
+        // 🚨 架构级类型豁免：
+        // 由于 TS 暂不支持动态联合类型分发（Correlated Record Types 缺陷），
+        // 编译器无法推断 block.type 与 block 实例的绝对绑定关系。
+        // 这里采用 `as React.ElementType` 进行降级处理，因为在上面的 BlockRegistry
+        // 定义中我们已经保证了类型映射的绝对正确性。
+        const TargetComponent = BlockRegistry[block.type] as React.ElementType;
+
         if (!TargetComponent) return null;
+
         return (
           <TargetComponent
             key={block.id}
