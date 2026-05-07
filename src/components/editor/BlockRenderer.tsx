@@ -63,8 +63,9 @@ export function BlockRenderer({
   const lastResolvedVersionRef = useRef<Record<string, number>>({});
 
   useEffect(() => {
+    const timers = timersRef.current;
     return () => {
-      Object.values(timersRef.current).forEach(clearTimeout);
+      Object.values(timers).forEach(clearTimeout);
     };
   }, []);
 
@@ -72,8 +73,10 @@ export function BlockRenderer({
     safeSnapshotRef.current = safeSnapshot;
   }, [safeSnapshot]);
 
+  // router.refresh() 触发父组件重新获取数据后，需要将新数据同步到本地状态。
+  // 此处 setState 是对 props 变化的响应，而非级联渲染。
   useEffect(() => {
-    setBlocks(initialBlocks);
+    setBlocks(initialBlocks); // eslint-disable-line react-hooks/set-state-in-effect
     setSafeSnapshot(initialBlocks);
   }, [initialBlocks]);
 
@@ -119,7 +122,7 @@ export function BlockRenderer({
             updates,
           );
         }
-      } catch (error) {
+      } catch {
         toast.error('区块保存失败', {
           description: '网络抖动，已自动恢复该部分内容。',
           duration: 4000,
