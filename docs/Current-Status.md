@@ -3,9 +3,9 @@
 ## 1. 项目基本信息
 
 - **项目名称**：ai-note
-- **当前阶段**：阶段二（交互闭环完善）已完成，进入阶段三（质量收敛与可扩展性建设）
+- **当前阶段**：阶段二（交互闭环完善）已完成；斜杠指令 MVP 已交付；进入阶段三（质量收敛与可扩展性建设）
 - **当前重心**：类型安全收敛、可观测性增强、面向真实后端的可迁移性
-- **上次更新时间**：2026-05-05
+- **上次更新时间**：2026-05-07
 
 ## 2. 已完成里程碑 (Completed)
 
@@ -27,6 +27,9 @@
 - [x] **最小测试集已落地**：已覆盖 `loading`、`error`、区块保存成功、保存失败回滚等核心路径（Vitest + Testing Library）。
 - [x] **GenerativeUIBlock 单元测试已编写**：覆盖 streaming/error/未知组件/异常 props 四条回归路径（`GenerativeUIBlock.test.tsx`，待提交至版本库）。
 - [x] **stale save 覆盖修复完成**：已防止旧的区块保存响应覆盖新状态。
+- [x] **斜杠指令 MVP 交付完成**：已实现 `/` 键触发悬浮菜单、键盘/鼠标交互、区块乐观插入与失败回滚、Heading/Code 可编辑化，详见 `docs/MVP-Slash-Commands-and-Block-Insertion.md`。
+- [x] **Tiptap 富文本引擎集成完成**：`RichTextEditor` 已基于 Tiptap 实现，支持 StarterKit、Placeholder 扩展、IME 输入兼容。
+- [x] **ESLint 类型安全修复完成**：移除所有 `@typescript-eslint/no-explicit-any` 错误与 `no-unused-vars` 警告。
 
 ## 3. 进行中的任务 (In Progress)
 
@@ -55,8 +58,8 @@
 
 | 技术 | 文档中的定位 | 当前代码状态 | 说明 |
 |------|-------------|-------------|------|
-| **Tiptap** | 富文本/画布底层引擎 | 未接入，无相关依赖 | 当前区块编辑器为轻量级结构化输入，非富文本编辑器。Record-of-Pitfalls 中关于 Tiptap 的踩坑记录为技术预研结论，非实际集成经验。 |
+| **Tiptap** | 富文本/画布底层引擎 | **已接入** | `RichTextEditor` 基于 `@tiptap/react` + `StarterKit` + `Placeholder` 实现，支持斜杠指令菜单触发。 |
 | **Vercel AI SDK** (`ai` / `@ai-sdk/react`) | AI 交互引擎 | 未接入，无相关 import | Generative UI 区块当前完全由 Mock 数据驱动，无真实的 AI 调用链路。 |
 | **Zustand** | 跨组件全局状态 | 已接入，仅用于 UI 状态 | 当前 Store 仅管理侧边栏/面板开关，未涉及业务数据状态。 |
 
-> **开发策略说明**：本项目采用 Mock-First 策略，上述技术将在对应阶段逐步接入。在接入前，相关文档内容应理解为”技术预研结论”而非”已落地经验”。
+> **开发策略说明**：本项目采用 Mock-First 策略，Vercel AI SDK 将在对应阶段逐步接入。

@@ -16,14 +16,16 @@ import { ParagraphBlock } from './blocks/ParagraphBlock';
 import { HeadingBlock } from './blocks/HeadingBlock';
 import { CodeBlock } from './blocks/CodeBlock';
 import { TodoBlock } from './blocks/TodoBlock';
-import { updateBlockAction } from '@/actions/note';
+import { updateBlockAction, addBlockAction } from '@/actions/note';
 
 import { GenerativeUIBlock } from './blocks/GenerativeUIBlock';
+import { SlashMenuItem } from './SlashMenu';
 
 // 🚀 优化：定义统一的组件 Props 接口，供各个 Block 组件继承和校验
 export interface BlockComponentProps<T extends Block> {
   block: T;
   onUpdate?: (id: string, updates: Partial<Block>) => void;
+  onInsert?: (afterBlockId: string, item: SlashMenuItem) => void;
   forceSyncToken?: number;
 }
 
@@ -200,6 +202,57 @@ export function BlockRenderer({
     [commitBlockUpdate],
   );
 
+  const insertBlock = useCallback(
+    async (afterBlockId: string, item: SlashMenuItem) => {
+      // 1. 生成临时 ID (Mock 环境先用时间戳+随机数凑合，真实情况可用 nanoid 或 crypto.randomUUID)
+      const tempId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+
+      // 2. 根据菜单项组装一个新的完整的 Block 对象
+      const newBlock: Block = {
+        id: tempId,
+        type: item.type,
+        content: '',
+        attributes: item.level
+          ? { level: item.level }
+          : item.type === 'generative_ui'
+            ? { componentId: 'TaskBoard', status: 'streaming', props: {} }
+            : {},
+      } as Block;
+
+      // 3. 乐观更新：立即将新区块插入到当前 blocks 和 safeSnapshot 数组中
+      const insertOptimistically = (prevBlocks: Block[]) => {
+        const idx = prevBlocks.findIndex((b) => b.id === afterBlockId);
+        if (idx === -1) return [...prevBlocks, newBlock];
+        const nextBlocks = [...prevBlocks];
+        nextBlocks.splice(idx + 1, 0, newBlock);
+        return nextBlocks;
+      };
+
+      setBlocks(insertOptimistically);
+      setSafeSnapshot(insertOptimistically); // 插入是原子操作，同步推进快照
+
+      try {
+        // 4. 发起真实的网络请求
+        const result = await addBlockAction(noteId, afterBlockId, newBlock);
+        if (result.success) {
+          // 真实后端可能会替换临时 ID 为真实 ID，这里模拟更新一下
+          console.log(`区块 ${tempId} 插入成功，真实 ID: ${result.blockId}`);
+        }
+      } catch {
+        toast.error('区块插入失败', {
+          description: '网络错误，已撤销新建操作。',
+        });
+
+        // 5. 失败回滚：从状态中移除这个临时区块
+        const rollback = (prevBlocks: Block[]) =>
+          prevBlocks.filter((b) => b.id !== tempId);
+        setBlocks(rollback);
+        setSafeSnapshot(rollback);
+      }
+    },
+    [noteId],
+  );
+
   if (!blocks || blocks.length === 0) {
     return <div className='text-zinc-400 italic p-4'>暂无内容</div>;
   }
@@ -221,6 +274,7 @@ export function BlockRenderer({
             key={block.id}
             block={block}
             onUpdate={updateBlockData}
+            onInsert={insertBlock}
             forceSyncToken={forceSyncToken}
           />
         );

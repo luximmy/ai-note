@@ -42,7 +42,7 @@ function TodoBlockComponent({
         aria-checked={block.attributes?.checked || false} // 反映真实状态
         aria-label={block.attributes?.checked ? '取消完成' : '标记为完成'} // 读屏提示
         // mt-[5px] 是神来之笔：抵消 leading-relaxed 带来的行高落差，实现完美居中对齐
-        className={`mt-[5px] flex h-4 w-4 shrink-0 items-center justify-center rounded-[4px] border transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900/20 ${
+        className={`mt-1.25 flex h-4 w-4 shrink-0 items-center justify-center rounded-lg border transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900/20 ${
           block.attributes?.checked
             ? 'bg-zinc-900 border-zinc-900 text-white'
             : 'border-zinc-300 bg-transparent hover:border-zinc-400 hover:bg-zinc-50'

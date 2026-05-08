@@ -7,7 +7,7 @@
 - **包管理器**: `pnpm` (统一使用 `pnpm install`, `pnpm dev`, `pnpm add`)
 - **样式引擎**: Tailwind CSS + `shadcn/ui`
 - **状态管理**: `zustand` (跨组件全局状态) + 场景化本地状态策略（`useOptimistic` / 双缓冲）
-- **富文本/画布底层**: Tiptap (Headless 模式) — *规划中，尚未接入*
+- **富文本/画布底层**: Tiptap (Headless 模式) — 已接入，`RichTextEditor` 基于 `@tiptap/react` + `StarterKit`
 - **AI 交互引擎**: Vercel AI SDK (`ai` & `@ai-sdk/react`) — *规划中，尚未接入*
 
 ## 2. 工程目录架构 (Directory Structure)

@@ -1,23 +1,47 @@
 // src/components/editor/blocks/HeadingBlock.tsx
 import { HeadingBlock as HeadingBlockType } from '@/types';
-import { ElementType, memo } from 'react';
+import { memo, useCallback } from 'react';
+import { RichTextEditor } from '../RichTextEditor';
+import { SlashMenuItem } from '../SlashMenu';
 
-function HeadingBlockComponent({ block }: { block: HeadingBlockType }) {
+function HeadingBlockComponent({
+  block,
+  onUpdate,
+  onInsert,
+  forceSyncToken,
+}: {
+  block: HeadingBlockType;
+  onUpdate?: (id: string, updates: Partial<HeadingBlockType>) => void;
+  onInsert?: (afterBlockId: string, item: SlashMenuItem) => void;
+  forceSyncToken?: number;
+}) {
   const level = block.attributes?.level || 1;
-  const Tag = `h${level}` as ElementType;
 
-  // 核心修复：添加 first:mt-0
-  // 含义：如果这个标题是文档的第一个区块，强制清除它的顶部外边距，防止与外层 padding 叠加
+  // 1. 接入防抖保存的回调
+  const handleUpdate = useCallback(
+    (content: string) => {
+      onUpdate?.(block.id, { content });
+    },
+    [block.id, onUpdate],
+  );
+
+  // 2. 样式映射保持不变
   const sizeClasses = {
     1: 'text-3xl mt-8 mb-4 first:mt-0',
     2: 'text-2xl mt-6 mb-3 first:mt-0',
     3: 'text-xl mt-4 mb-2 first:mt-0',
-  }[level];
+  }[level as 1 | 2 | 3];
 
   return (
-    <Tag className={`font-bold text-zinc-900 outline-none ${sizeClasses}`}>
-      {block.content}
-    </Tag>
+    <div className={`font-bold text-zinc-900 outline-none ${sizeClasses}`}>
+      {/* 3. 替换为动态的富文本编辑器，并接通 onInsert */}
+      <RichTextEditor
+        initialContent={block.content || ''}
+        onUpdate={handleUpdate}
+        onSlashCommand={(item) => onInsert?.(block.id, item)}
+        forceSyncToken={forceSyncToken}
+      />
+    </div>
   );
 }
 

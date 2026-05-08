@@ -94,22 +94,30 @@ export function RichTextEditor({
           // 如果用户刚好敲击了 "/"
           if (event.key === '/' && !isComposingRef.current) {
             const { state } = view;
-            const { from } = state.selection;
+
+            // 💡 修复点：使用解析后的位置 $from
+            const { $from, from } = state.selection;
+
+            // 1. $from.parentOffset 是光标在当前文本块（如当前段落）内的相对位置
+            // 如果为 0，说明是在行首（哪怕是敲击回车后的新行首！）
+            const isAtStartOfLine = $from.parentOffset === 0;
+
+            // 2. 获取光标前面的那一个字符（用于判断前面是不是空格）
+            const charBefore = isAtStartOfLine
+              ? ''
+              : $from.parent.textContent.slice(
+                  $from.parentOffset - 1,
+                  $from.parentOffset,
+                );
 
             // 确保 / 是在行首，或者前面是个空格（防误触：比如输入 a/b 不唤起）
-            const textBefore = state.doc.textBetween(
-              Math.max(0, from - 1),
-              from,
-              '\n',
-            );
-            if (from === 1 || textBefore === ' ' || textBefore === '\n') {
-              // 获取光标在屏幕上的确切像素坐标
+            if (isAtStartOfLine || charBefore === ' ') {
               const coords = view.coordsAtPos(from);
               setSlashMenuState({
                 isOpen: true,
                 position: { x: coords.left, y: coords.top },
               });
-              // 让 "/" 正常输入到编辑器里，后续用户选择菜单项后，我们再把它删掉
+              // 这里 return false，让 "/" 正常输入到编辑器里
             }
           }
           return false;

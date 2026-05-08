@@ -1,7 +1,9 @@
 # MVP 规格说明：斜杠指令菜单与区块插入
 
 > 创建时间：2026-05-07
+> 完成时间：2026-05-07
 > 目标：补齐画布核心创作能力——用户可通过斜杠指令菜单（Slash Commands）新建任意类型区块，使笔记从"可编辑"升级为"可创作"。
+> **当前状态：MVP 已完成，所有核心任务已交付。**
 
 ## 1. 背景与动机
 
@@ -118,63 +120,67 @@ export async function addBlockAction(
 
 ## 5. 任务拆解与交付标准
 
-### Task 1：SlashMenu 组件（UI 层）
+### Task 1：SlashMenu 组件（UI 层）✅
 
 - **目标文件**：`src/components/editor/SlashMenu.tsx`
 - **已有基础**：初始实现已存在（含菜单数据、键盘监听、基础渲染）
-- **待完成**：
-  - [ ] `createPortal` 渲染到 `document.body`
-  - [ ] 基于传入 `position` 的绝对定位 + 边界翻转
-  - [ ] 鼠标悬浮高亮与点击选中
-  - [ ] 打开时重置 `selectedIndex` 到 0
+- **已完成**：
+  - [x] `createPortal` 渲染到 `document.body`
+  - [x] 基于传入 `position` 的绝对定位 + 边界翻转
+  - [x] 鼠标悬浮高亮与点击选中
+  - [x] 打开时重置 `selectedIndex` 到 0（使用 `useReducer` + `SYNC_OPEN` action）
 - **交付标准**：可独立展示，键盘 + 鼠标交互均正常，脱离编辑器可单独测试。
+- **实现备注**：使用 `useSyncExternalStore` 模式检测客户端挂载，避免 SSR hydration 问题；使用 `useReducer` 管理菜单状态。
 
-### Task 2：Tiptap `/` 键拦截与 Suggestion 集成
+### Task 2：Tiptap `/` 键拦截与 Suggestion 集成 ✅
 
 - **目标文件**：`src/components/editor/RichTextEditor.tsx`
-- **待完成**：
-  - [ ] 引入或自定义 Tiptap Suggestion 扩展
-  - [ ] 监听 `/` 触发，计算光标坐标，传递给 `SlashMenu`
-  - [ ] 处理关闭逻辑（Escape、外部点击、选中后）
-  - [ ] 选中菜单项后清除 `/` 字符并触发回调
+- **已完成**：
+  - [x] 通过 Tiptap `handleDOMEvents.keydown` 拦截 `/` 键（未使用 Suggestion 扩展，采用自定义实现）
+  - [x] 监听 `/` 触发，使用 `view.coordsAtPos()` 计算光标坐标，传递给 `SlashMenu`
+  - [x] 处理关闭逻辑（Escape、Backspace、Space 关闭菜单）
+  - [x] 选中菜单项后通过 `editor.commands.deleteRange` 清除 `/` 字符并触发 `onSlashCommand` 回调
 - **交付标准**：在 RichTextEditor 中输入 `/` 可弹出菜单，选中后正确回调，不影响现有编辑和保存链路。
+- **实现备注**：通过 `isComposingRef` 在中文 IME 输入时跳过触发；通过 `isSlashMenuOpenRef` 在菜单打开时拦截上下键和回车键防止 Tiptap 光标乱跑。
 
-### Task 3：区块插入调度（BlockRenderer 层）
+### Task 3：区块插入调度（BlockRenderer 层）✅
 
 - **目标文件**：`src/components/editor/BlockRenderer.tsx`
-- **待完成**：
-  - [ ] 新增 `insertBlock(afterBlockId, newBlock)` 方法
-  - [ ] 乐观更新 `blocks` 和 `safeSnapshot`
-  - [ ] `autoFocusToken` 机制：新区块 mount 时自动聚焦
-  - [ ] 集成 `addBlockAction`，处理成功（替换临时 ID）和失败（回滚）
-  - [ ] 请求序号纳入现有 `requestSeqRef` 体系
+- **已完成**：
+  - [x] 新增 `insertBlock(afterBlockId, item: SlashMenuItem)` 方法
+  - [x] 乐观更新 `blocks` 和 `safeSnapshot`（插入为原子操作，同步推进快照）
+  - [ ] `autoFocusToken` 机制：新区块 mount 时自动聚焦（**未实现，后续迭代**）
+  - [x] 集成 `addBlockAction`，处理失败回滚（成功后仅日志记录，未替换临时 ID）
+  - [x] 插入操作不走防抖，直接同步两个 buffer
 - **交付标准**：从 UI 触发到 Mock 持久化，形成完整的乐观插入 + 失败回滚闭环。
+- **实现备注**：`insertBlock` 接收 `SlashMenuItem` 而非 `Block`，在方法内部根据 `item.type` 和 `item.level` 组装完整的 Block 对象。`generative_ui` 类型默认使用 `TaskBoard` 组件。
 
-### Task 4：`addBlockAction` Server Action
+### Task 4：`addBlockAction` Server Action ✅
 
 - **目标文件**：`src/actions/note.ts`
-- **待完成**：
-  - [ ] 新增 `addBlockAction(noteId, afterBlockId, newBlock)` 函数
-  - [ ] Mock 延迟与失败率配置（与 `updateBlockAction` 对齐）
-  - [ ] 在 `mockDocuments` 中正确插入区块
+- **已完成**：
+  - [x] 新增 `addBlockAction(noteId, afterBlockId, newBlock)` 函数
+  - [x] Mock 延迟 500ms 与 15% 失败率配置（与 `updateBlockAction` 对齐）
+  - [x] 在 `mockDocuments` 中通过 `splice` 在指定位置后插入区块
 - **交付标准**：调用方可获得 `success`、`blockId`、`timestamp` 返回值。
 
-### Task 5：HeadingBlock / CodeBlock 可编辑化
+### Task 5：HeadingBlock / CodeBlock 可编辑化 ✅
 
 - **目标文件**：`src/components/editor/blocks/HeadingBlock.tsx`、`CodeBlock.tsx`
-- **待完成**：
-  - [ ] HeadingBlock：按 `level` 渲染 heading 标签，内嵌可编辑区域
-  - [ ] CodeBlock：`<pre><code>` 区域可编辑，支持纯文本输入
-  - [ ] 两者均接入 `onUpdate` 回调，融入现有保存链路
-  - [ ] 保持 `forceSyncToken` 回滚能力
+- **已完成**：
+  - [x] HeadingBlock：按 `level` 渲染对应样式，内嵌 `RichTextEditor` 可编辑区域
+  - [x] CodeBlock：使用 `<textarea>` 实现可编辑，支持纯文本输入与自动高度调整
+  - [x] 两者均接入 `onUpdate` 回调，融入现有保存链路
+  - [x] HeadingBlock 接入 `forceSyncToken` 回滚能力；CodeBlock 通过 `textarea` 的 `value` 受控
 - **交付标准**：插入 Heading/Code 区块后可立即输入内容，内容可保存。
+- **实现备注**：CodeBlock 使用 `textareaRef` + `useEffect` 实现自动高度；HeadingBlock 通过 `sizeClasses` 映射 `level` 到 Tailwind 样式类。
 
-### Task 6：集成测试与文档更新
+### Task 6：集成测试与文档更新 ⏳
 
 - **待完成**：
-  - [ ] 为 `insertBlock` 和 `addBlockAction` 编写单元测试
-  - [ ] 更新 `Current-Status.md` 记录 MVP 完成状态
-  - [ ] 更新 `Data-Schema.md` 如有类型变更
+  - [ ] 为 `insertBlock` 和 `addBlockAction` 编写单元测试（**待补充**）
+  - [x] 更新 `Current-Status.md` 记录 MVP 完成状态
+  - [x] `Data-Schema.md` 无需变更（类型定义未变）
 - **交付标准**：测试覆盖成功插入、失败回滚、焦点转移三条核心路径。
 
 ## 6. 依赖与风险

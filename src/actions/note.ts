@@ -65,3 +65,34 @@ export async function updateBlockAction(
   );
   return { success: true, timestamp: Date.now() };
 }
+
+/**
+ * 模拟添加新区块
+ */
+export async function addBlockAction(
+  noteId: string,
+  afterBlockId: string,
+  newBlock: Block,
+) {
+  await simulateNetwork(500, 0.15); // 模拟 500ms 延迟和 15% 失败率
+
+  const note = mockDocuments.find((doc) => doc.id === noteId);
+  if (note) {
+    const insertIndex = note.blocks.findIndex((b) => b.id === afterBlockId);
+    if (insertIndex !== -1) {
+      // 在指定位置后插入新区块
+      note.blocks.splice(insertIndex + 1, 0, newBlock);
+    } else {
+      note.blocks.push(newBlock);
+    }
+  }
+
+  console.log(`[Mock Server] 成功在笔记 ${noteId} 中插入区块 ${newBlock.id}`);
+
+  // 返回真实的（持久化后的）blockId 和时间戳
+  return {
+    success: true,
+    blockId: newBlock.id, // 真实后端这里会返回数据库生成的真实 ID
+    timestamp: Date.now(),
+  };
+}

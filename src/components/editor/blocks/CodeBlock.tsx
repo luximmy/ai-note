@@ -1,14 +1,40 @@
 // src/components/editor/blocks/CodeBlock.tsx
-import { CodeBlock as CodeBlockType } from '@/types'; // 别名防止与组件名冲突
-import { memo } from 'react';
+import { CodeBlock as CodeBlockType } from '@/types';
+import { memo, useCallback, useRef, useEffect } from 'react';
 
-function CodeBlockComponent({ block }: { block: CodeBlockType }) {
-  // 因为是从 types 引入的精准类型，这里直接拥有自动补全！
+function CodeBlockComponent({
+  block,
+  onUpdate,
+}: {
+  block: CodeBlockType;
+  onUpdate?: (id: string, updates: Partial<CodeBlockType>) => void;
+}) {
   const { isExecuting, language } = block.attributes;
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // 1. 文本变更自动保存
+  const handleChange = useCallback(
+    (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+      onUpdate?.(block.id, { content: e.target.value });
+    },
+    [block.id, onUpdate],
+  );
+
+  // 2. 自动调整 textarea 的高度以适应代码行数
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
+    }
+  }, [block.content]);
 
   return (
     <div
-      className={`relative bg-zinc-950 text-zinc-50 p-4 rounded-md font-mono text-sm overflow-x-auto my-4 transition-all ${isExecuting ? 'ring-2 ring-emerald-500/50 shadow-[0_0_15px_rgba(16,185,129,0.2)]' : 'shadow-sm'}`}
+      className={`relative bg-zinc-950 text-zinc-50 p-4 rounded-md font-mono text-sm overflow-hidden my-4 transition-all ${
+        isExecuting
+          ? 'ring-2 ring-emerald-500/50 shadow-[0_0_15px_rgba(16,185,129,0.2)]'
+          : 'shadow-sm'
+      }`}
     >
       {isExecuting && (
         <div className='absolute top-3 right-3 flex items-center gap-2 text-xs text-emerald-400'>
@@ -17,12 +43,21 @@ function CodeBlockComponent({ block }: { block: CodeBlockType }) {
       )}
       {!isExecuting && (
         <div className='text-zinc-500 text-xs mb-2 absolute top-2 right-2 uppercase'>
-          {language}
+          {language || 'plaintext'}
         </div>
       )}
-      <pre>
-        <code>{block.content}</code>
-      </pre>
+
+      {/* 3. 替换只读的 <code> 为可编辑的 textarea */}
+      <textarea
+        ref={textareaRef}
+        value={block.content || ''}
+        onChange={handleChange}
+        disabled={isExecuting}
+        spellCheck={false}
+        placeholder='在此输入代码...'
+        className='w-full bg-transparent text-zinc-50 outline-none resize-none min-h-15'
+        style={{ fontFamily: 'inherit' }}
+      />
     </div>
   );
 }
