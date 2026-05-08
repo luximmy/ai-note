@@ -3,9 +3,9 @@
 ## 1. 项目基本信息
 
 - **项目名称**：ai-note
-- **当前阶段**：阶段二（交互闭环完善）已完成；斜杠指令 MVP 已交付；进入阶段三（质量收敛与可扩展性建设）
-- **当前重心**：类型安全收敛、可观测性增强、面向真实后端的可迁移性
-- **上次更新时间**：2026-05-07
+- **当前阶段**：阶段二（交互闭环完善）已完成；斜杠指令 MVP 已交付；阶段三 P0（类型收敛、可观测性）已完成；进入阶段三 P1（AI 能力接入）
+- **当前重心**：接入 DeepSeek API，实现 Agent 侧边栏真实对话与 AI 内容插入编辑器
+- **上次更新时间**：2026-05-08
 
 ## 2. 已完成里程碑 (Completed)
 
@@ -27,7 +27,7 @@
 - [x] **最小测试集已落地**：已覆盖 `loading`、`error`、区块保存成功、保存失败回滚等核心路径（Vitest + Testing Library）。
 - [x] **GenerativeUIBlock 单元测试已编写**：覆盖 streaming/error/未知组件/异常 props 四条回归路径（`GenerativeUIBlock.test.tsx`）。
 - [x] **stale save 覆盖修复完成**：已防止旧的区块保存响应覆盖新状态。
-- [x] **斜杠指令 MVP 交付完成**：已实现 `/` 键触发悬浮菜单、键盘/鼠标交互、区块乐观插入与失败回滚、Heading/Code 可编辑化，详见 `docs/MVP-Slash-Commands-and-Block-Insertion.md`。
+- [x] **斜杠指令 MVP 交付完成**：已实现 `/` 键触发悬浮菜单、键盘/鼠标交互、区块乐观插入与失败回滚、Heading/Code 可编辑化。
 - [x] **Tiptap 富文本引擎集成完成**：`RichTextEditor` 已基于 Tiptap 实现，支持 StarterKit、Placeholder 扩展、IME 输入兼容。
 - [x] **ESLint 类型安全修复完成**：移除所有 `@typescript-eslint/no-explicit-any` 错误与 `no-unused-vars` 警告。
 - [x] **动态分发类型豁免与 AI props 收敛（P0）**：`BlockRenderer` 动态分发豁免压缩到 `React.ElementType` 单一调用点；`GenerativeUIBlock` 导出 `KNOWN_COMPONENT_IDS` 白名单，新增 `sanitizeProps` 运行时防护，移除所有 `as any` 断言。
@@ -36,22 +36,27 @@
 
 ## 3. 进行中的任务 (In Progress)
 
-- [ ] **Mock 到真实后端迁移预案未固化**：需明确 Action 层协议（幂等键、版本字段、错误码语义）以降低切换成本。
+- [ ] **DeepSeek API 接入**：创建 `/api/chat` Route Handler，实现 streaming 对话
+- [ ] **Agent 侧边栏 Chat UI**：替换占位 stub，实现完整聊天界面
+- [ ] **AI 内容插入编辑器**：AI 生成内容可通过按钮插入到笔记中
 
 ## 4. 下一阶段任务派发 (Next Steps)
 
 1. ~~**任务 4.1（P0）**~~ ✅ 已完成：类型收敛与白名单防护。
 2. ~~**任务 4.2（P0）**~~ ✅ 已完成：可观测性埋点已落地。
-3. **任务 4.3（P1）**：定义真实后端接入协议（版本字段、冲突策略、错误码映射、幂等设计）。
-4. **任务 4.4（P1）**：为 `generative_ui` 增加组件白名单校验、降级策略与回归测试样例。
-5. **任务 4.5（P2）**：补充端到端编辑流测试（跨区块快速编辑、切页中断、失败恢复）。
-6. **执行清单文档**：详见 `docs/Phase-3-Execution-Plan.md`。
+3. **任务 3.1（P0）**：环境配置 + `/api/chat` Route Handler 搭建。
+4. **任务 3.2（P0）**：Agent 侧边栏 Chat UI（`useChat` + streaming 渲染）。
+5. **任务 3.3（P0）**：笔记上下文注入（system prompt 塞入当前笔记内容）。
+6. **任务 3.4（P1）**：AI → 编辑器插入链路（复用 `insertBlock`）。
+7. **任务 3.5（P1）**：Generative UI 联动（AI 返回结构化 JSON → 插入交互组件）。
+8. **任务 3.6（P2）**：UI 打磨 + 部署到 Vercel。
+9. **执行清单文档**：详见 `docs/Phase-3-Execution-Plan.md`。
 
 ## 5. 关键备注 (Context Memo)
 
-- **当前进展结论**：阶段二目标已达成，P0 任务（类型收敛、可观测性）已交付，编辑器核心交互链路形成闭环。
-- **主要风险**：风险已从”功能缺失”转向”工程质量”，当前集中在后端迁移协议与端到端测试覆盖。
-- **执行建议**：并行推进 4.3（后端协议）与 4.4（Generative UI 安全），最后补齐 4.5 端到端验证。
+- **当前进展结论**：阶段二目标已达成，阶段三 P0（类型收敛、可观测性）已交付，编辑器核心交互链路形成闭环。下一步是接入真实 AI 能力，让 “AI-Native” 名副其实。
+- **主要风险**：风险从”工程质量”转向”AI 链路打通”，核心是 DeepSeek API 接入与 Agent 侧边栏的交互设计。
+- **执行建议**：先打通 API Route + Chat UI 最小闭环（P0），再做编辑器插入联动（P1），最后打磨部署（P2）。
 
 ## 6. 技术栈接入状态澄清
 
@@ -59,7 +64,7 @@
 
 | 技术 | 文档中的定位 | 当前代码状态 | 说明 |
 |------|-------------|-------------|------|
-| **Vercel AI SDK** (`ai` / `@ai-sdk/react`) | AI 交互引擎 | 已安装依赖，未在代码中 import | Generative UI 区块当前完全由 Mock 数据驱动，无真实的 AI 调用链路。 |
-| **Zustand** | 跨组件全局状态 | 已接入，仅用于 UI 状态 | 当前 Store 仅管理侧边栏/面板开关，未涉及业务数据状态。 |
+| **Vercel AI SDK** (`ai` / `@ai-sdk/react`) | AI 交互引擎 | 已安装依赖，未在代码中 import | **即将接入**：计划通过 `@ai-sdk/openai` + DeepSeek baseURL 实现真实 AI 调用。 |
+| **Zustand** | 跨组件全局状态 | 已接入，仅用于 UI 状态 | 当前 Store 仅管理侧边栏/面板开关，计划扩展为 Agent ↔ Editor 通信桥梁。 |
 
-> **开发策略说明**：本项目采用 Mock-First 策略，Vercel AI SDK 将在对应阶段逐步接入。
+> **开发策略说明**：本项目采用 Mock-First 策略，AI 能力接入为阶段三核心任务，详见 `docs/Phase-3-Execution-Plan.md`。

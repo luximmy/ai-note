@@ -9,7 +9,7 @@
 - **通知组件**: `sonner` (toast 通知)
 - **状态管理**: `zustand` (跨组件全局状态) + 场景化本地状态策略（`useOptimistic` / 双缓冲）
 - **富文本/画布底层**: Tiptap (Headless 模式) — 已接入，`RichTextEditor` 基于 `@tiptap/react` + `StarterKit`
-- **AI 交互引擎**: Vercel AI SDK (`ai` & `@ai-sdk/react`) — *规划中，尚未接入*
+- **AI 交互引擎**: Vercel AI SDK (`ai` & `@ai-sdk/react` & `@ai-sdk/openai`) — 已安装依赖，计划接入 DeepSeek API（OpenAI 兼容协议）
 
 ## 2. 工程目录架构 (Directory Structure)
 
@@ -24,15 +24,17 @@ ai-note/
 ├── src/
 │   ├── actions/             # Server Actions (数据请求与逻辑代理层)
 │   ├── app/                 # 路由层 (仅包含页面骨架与 Layout)
+│   │   └── api/             #   API Routes (AI 聊天等服务端接口)
+│   │       └── chat/        #     DeepSeek 聊天 streaming 端点
 │   ├── components/          # 视图层
-│   │   ├── ai/              #   AI 组件 (如 TaskBoard)
+│   │   ├── ai/              #   AI 组件 (TaskBoard, ChatPanel)
 │   │   ├── editor/          #   编辑器核心 (BlockRenderer, RichTextEditor, SlashMenu)
 │   │   │   ├── blocks/      #     区块组件 (ParagraphBlock, HeadingBlock, ...)
 │   │   │   └── __tests__/   #     编辑器测试
 │   │   └── ui/              #   通用 UI 组件 (shadcn/ui)
 │   ├── lib/                 # 纯函数与工具 (utils.ts, telemetry.ts)
 │   ├── mock/                # Mock 数据中心 (提供高保真 JSON 数据与模拟延迟)
-│   ├── store/               # Zustand 全局状态定义
+│   ├── store/               # Zustand 全局状态定义 (含 Agent ↔ Editor 通信)
 │   └── types/               # TypeScript 全局接口定义 (如 Block Schema)
 └── pnpm-lock.yaml           # 锁定依赖版本
 ```
@@ -59,6 +61,13 @@ ai-note/
 
 - **禁止直接请求**: 前端组件永远不直接调用 Fetch 或真实数据库，必须且只能调用 `src/actions/` 下的 Server Actions。
 - **Mock 契约**: 当前开发阶段，Server Actions 必须显式模拟网络延迟和失败率。读接口默认约 800ms；写接口可按交互体验配置在 300-800ms 区间，并应保持可关闭或可配置，以便联调与验收。
+
+### 3.4 AI 调用链路
+
+- **API Route 隔离**: AI 调用走独立的 `src/app/api/chat/route.ts`，与编辑器的 Server Actions 互不干扰。
+- **Provider 可替换**: 通过 `createOpenAI({ baseURL, apiKey })` 配置 DeepSeek，换 Provider 只改环境变量，不改业务代码。
+- **Streaming 优先**: 所有 AI 响应必须走 streaming，不允许阻塞式等待完整响应。
+- **上下文注入**: 当前笔记内容通过 system prompt 注入，不做客户端 RAG（demo 阶段策略）。
 
 ## 4. AI 辅助开发代码规约 (Coding Conventions for AI)
 

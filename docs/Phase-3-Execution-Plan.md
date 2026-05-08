@@ -1,38 +1,95 @@
-# 阶段三执行清单（质量收敛与可扩展性）
+# 阶段三执行清单：AI 能力接入与 Demo 收口
 
-> 更新时间：2026-04-29  
-> 目标：在阶段二功能闭环已达成的基础上，完成工程质量收口，并为真实后端接入做好协议与观测准备。
+> 更新时间：2026-05-08
+> 目标：接入 DeepSeek API，让 Agent 侧边栏具备真实 AI 对话能力，并支持将 AI 生成内容插入编辑器，形成可演示、可面试的完整闭环。
 
-## P0（本周必须完成）
+## 技术选型
 
-1. **类型收敛：Schema 源头与动态注册表边界** ✅
-   - 目标文件：`src/types/index.ts`、`src/components/editor/BlockRenderer.tsx`、`src/components/editor/blocks/GenerativeUIBlock.tsx`
-   - 完成状态：`BlockRenderer` 通过映射类型约束注册表，动态分发豁免压缩到 `React.ElementType` 单一调用点；`GenerativeUIBlock` 导出 `KNOWN_COMPONENT_IDS` 白名单，新增 `sanitizeProps` 运行时防护，移除所有 `as any` 断言。
-   - 交付标准：已达成。Schema 源头使用 `Record<string, unknown>`；白名单与 props 防护已落地。
+| 项目 | 选型 | 理由 |
+|------|------|------|
+| AI Provider | DeepSeek (`deepseek-chat`) | OpenAI 兼容协议，成本极低（百万 token 几块钱），国内访问稳定 |
+| SDK | Vercel AI SDK (`ai` + `@ai-sdk/react` + `@ai-sdk/openai`) | 已安装依赖，原生支持 streaming、tool calling、React 集成 |
+| API 层 | Next.js Route Handler (`src/app/api/chat/route.ts`) | 服务端调用，API Key 不暴露给客户端 |
 
-2. **保存链路可观测性** ✅
-   - 目标：为”提交成功/失败/回滚/乱序丢弃”增加统一事件埋点接口（先 mock sink，再接真实平台）。
-   - 完成状态：已新增 `src/lib/telemetry.ts`，定义 `SaveEvent` 类型与 `emitSaveEvent` 函数；`BlockRenderer` 中所有 console 日志已替换为结构化事件，支持 success/failure/rollback/out_of_order 四种事件类型。
-   - 交付标准：已达成。异常事件包含 `noteId`、`blockId`、`seq`、`error` 字段。
+## P0：核心 AI 链路打通（必须完成）
 
-## P1（阶段内完成）
+### 任务 3.1：环境与 API Route 搭建
 
-3. **真实后端协议草案**
-   - 输出文档：请求载荷、版本字段、冲突策略、幂等键、错误码约定。
-   - 交付标准：`src/actions/note.ts` 可按开关切换 Mock/真实实现而不改调用方。
+- **目标文件**：`.env.local`、`src/app/api/chat/route.ts`
+- **内容**：
+  - 配置 `DEEPSEEK_API_KEY` 环境变量
+  - 安装 `@ai-sdk/openai` 依赖
+  - 创建 `/api/chat` Route Handler，使用 `createOpenAI({ baseURL, apiKey })` 指向 DeepSeek
+  - 实现 `streamText` 基础调用，支持 streaming 响应
+- **交付标准**：`curl` 或 Postman 可触发流式对话，返回 DeepSeek 的实时 token 流
 
-4. **Generative UI 安全与回归**
-   - 目标：为组件注册表增加白名单与未知组件降级策略测试。
-   - 交付标准：对未知 `componentId`、异常 `props`、错误状态均有可预期 UI。
+### 任务 3.2：Agent 侧边栏 Chat UI
 
-## P2（持续优化）
+- **目标文件**：`src/components/ai/ChatPanel.tsx`、`src/app/app/layout.tsx`
+- **内容**：
+  - 使用 `@ai-sdk/react` 的 `useChat` hook 管理对话状态
+  - 实现消息列表（用户消息 + AI 消息，区分样式）
+  - 实现输入框 + 发送按钮
+  - AI 消息支持 streaming 渲染（逐字显示）
+  - 替换 layout 中的"等待输入指令..."占位
+- **交付标准**：用户可在侧边栏与 DeepSeek 实时对话，消息流式渲染
 
-5. **端到端编辑流验证**
-   - 场景：跨区块快速编辑、路由切换中断、失败回滚、刷新后状态一致性。
-   - 交付标准：形成可重复执行的 E2E 用例集。
+### 任务 3.3：笔记上下文注入
 
-## 负责人建议
+- **目标文件**：`src/app/api/chat/route.ts`、`ChatPanel.tsx`
+- **内容**：
+  - 前端将当前笔记的标题 + 区块内容序列化为文本，随请求发送
+  - API Route 在 system prompt 中注入笔记上下文，让 AI 知道用户在看什么
+  - 不做 RAG，纯 prompt 注入（demo 阶段够用，面试时可讲后续向量化方案）
+- **交付标准**：AI 能回答关于当前笔记内容的问题，如"帮我总结这篇笔记"
 
-- **编辑器链路 owner**：任务 1、2、4
-- **数据协议 owner**：任务 3
-- **测试与质量 owner**：任务 5
+## P1：AI 内容插入编辑器（高价值功能）
+
+### 任务 3.4：AI → 编辑器插入链路
+
+- **目标文件**：`src/components/ai/ChatPanel.tsx`、`src/components/editor/BlockRenderer.tsx`、`src/app/app/layout.tsx`
+- **内容**：
+  - AI 回复中识别可插入内容（文本段落、代码块等）
+  - ChatPanel 提供"插入到笔记"按钮，点击后调用 BlockRenderer 的 `insertBlock`
+  - 需要 layout 层打通 ChatPanel 与 BlockRenderer 的通信（通过 Zustand store 或 context + callback）
+  - 支持插入 paragraph、heading、code 三种基础区块类型
+- **交付标准**：用户对 AI 说"帮我写一个总结"，AI 生成内容后，用户点击插入按钮，内容出现在编辑器中
+
+### 任务 3.5：Generative UI 联动（可选进阶）
+
+- **目标文件**：`ChatPanel.tsx`、`BlockRenderer.tsx`
+- **内容**：
+  - AI 可以返回结构化 JSON，触发在编辑器中插入 `generative_ui` 区块
+  - 比如用户说"帮我列一个待办清单"，AI 返回 `{ componentId: 'TaskBoard', props: { tasks: [...] } }`
+  - 复用现有的 GenerativeUIBlock 渲染链路
+- **交付标准**：AI 生成的结构化内容能在编辑器中以交互组件形式渲染
+
+## P2：体验打磨与部署
+
+### 任务 3.6：UI 打磨
+
+- ChatPanel 空态引导（提示用户可以问什么）
+- AI 回复的 Markdown 渲染（代码块、列表、加粗等）
+- 加载状态与错误处理（网络断开、API Key 无效等）
+
+### 任务 3.7：部署到 Vercel
+
+- 配置 Vercel 环境变量
+- 确保 streaming 在 Vercel Edge/Node Runtime 下正常工作
+- 产出 live demo 链接
+
+## 依赖关系
+
+```
+3.1 (API Route) ──→ 3.2 (Chat UI) ──→ 3.3 (上下文注入)
+                                      ──→ 3.4 (插入编辑器)
+                                           ──→ 3.5 (Generative UI 联动)
+3.2 ──→ 3.6 (UI 打磨) ──→ 3.7 (部署)
+```
+
+## 面试讲点预设
+
+1. **"为什么选 DeepSeek？"** — OpenAI 兼容协议，成本低，国内稳定；架构上 provider 可替换，换 OpenAI/Claude 只改一行配置
+2. **"AI 内容怎么插入编辑器的？"** — 复用现有的 `insertBlock` 乐观更新链路，AI 输出经过 sanitize 后走和用户手动插入相同的路径
+3. **"Generative UI 怎么实现的？"** — 组件注册表 + 白名单 + 运行时 props 校验，未知组件降级渲染
+4. **"为什么不用 RAG？"** — Demo 阶段 prompt 注入够用；架构上已预留 `SearchResultFragment` 接口，后续可接向量数据库

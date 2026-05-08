@@ -38,7 +38,7 @@
 
 - **前端框架**：Next.js 16 (App Router) + React 19 (Server Components)
 - **编辑器底层**：Tiptap (无头编辑器模式)
-- **AI 工程**：Vercel AI SDK (处理 Streaming UI 与 Tool Calling)
+- **AI 工程**：Vercel AI SDK + DeepSeek API (Streaming UI、Tool Calling、Generative UI 联动)
 - **状态管理**：Zustand (轻量级跨组件同步)
 - **样式/UI**：Tailwind CSS + shadcn/ui (高保真定制)
 - **数据模型**：严格的 TypeScript JSON Schema 定义
@@ -53,5 +53,5 @@
 
 ## 6. 简历高光预设 (Resume Highlights)
 
-- **关键词**：JSON Schema 驱动、React 19 乐观更新、生成式 UI、区块化状态管理、RAG 向量召回可视化。
-- **预期产出**：一个具备高度工程化复杂度、极致交互流畅度、且深度融合 AI 能力的专业级 Web App。
+- **关键词**：JSON Schema 驱动、React 19 乐观更新、生成式 UI、区块化状态管理、DeepSeek/LLM Streaming 集成、AI ↔ 编辑器双向联动。
+- **预期产出**：一个具备高度工程化复杂度、极致交互流畅度、且深度融合 AI 能力的专业级 Web App。AI 不仅能对话，还能直接在画布中生成可交互的 React 组件。
