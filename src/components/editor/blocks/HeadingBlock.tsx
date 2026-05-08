@@ -9,11 +9,13 @@ function HeadingBlockComponent({
   onUpdate,
   onInsert,
   forceSyncToken,
+  autoFocus,
 }: {
   block: HeadingBlockType;
   onUpdate?: (id: string, updates: Partial<HeadingBlockType>) => void;
   onInsert?: (afterBlockId: string, item: SlashMenuItem) => void;
   forceSyncToken?: number;
+  autoFocus?: boolean;
 }) {
   const level = block.attributes?.level || 1;
 
@@ -40,6 +42,7 @@ function HeadingBlockComponent({
         onUpdate={handleUpdate}
         onSlashCommand={(item) => onInsert?.(block.id, item)}
         forceSyncToken={forceSyncToken}
+        autoFocus={autoFocus}
       />
     </div>
   );

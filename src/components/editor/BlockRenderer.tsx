@@ -28,6 +28,7 @@ export interface BlockComponentProps<T extends Block> {
   onUpdate?: (id: string, updates: Partial<Block>) => void;
   onInsert?: (afterBlockId: string, item: SlashMenuItem) => void;
   forceSyncToken?: number;
+  autoFocus?: boolean;
 }
 
 // 🚀 收敛类型：使用映射类型精确校验每个区块的渲染器，彻底删除这里的 `as any`
@@ -56,6 +57,7 @@ export function BlockRenderer({
   const [safeSnapshot, setSafeSnapshot] = useState<Block[]>(initialBlocks);
   const safeSnapshotRef = useRef<Block[]>(initialBlocks);
   const [forceSyncToken, setForceSyncToken] = useState(0);
+  const [autoFocusBlockId, setAutoFocusBlockId] = useState<string | null>(null);
 
   const timersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   const pendingUpdatesRef = useRef<Record<string, Partial<Block>>>({});
@@ -248,6 +250,10 @@ export function BlockRenderer({
       setBlocks(insertOptimistically);
       setSafeSnapshot(insertOptimistically); // 插入是原子操作，同步推进快照
 
+      setAutoFocusBlockId(tempId);
+      // 下一帧清除，避免后续重渲染反复触发聚焦
+      requestAnimationFrame(() => setAutoFocusBlockId(null));
+
       try {
         // 4. 发起真实的网络请求
         const result = await addBlockAction(noteId, afterBlockId, newBlock);
@@ -308,6 +314,7 @@ export function BlockRenderer({
             onUpdate={updateBlockData}
             onInsert={insertBlock}
             forceSyncToken={forceSyncToken}
+            autoFocus={autoFocusBlockId === block.id}
           />
         );
       })}

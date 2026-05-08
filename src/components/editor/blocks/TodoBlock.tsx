@@ -7,10 +7,12 @@ function TodoBlockComponent({
   block,
   onUpdate,
   forceSyncToken,
+  autoFocus,
 }: {
   block: TodoBlockType;
   onUpdate?: (id: string, updates: Partial<TodoBlockType>) => void;
   forceSyncToken?: number;
+  autoFocus?: boolean;
 }) {
   const handleTextUpdate = useCallback(
     (newContent: string) => {
@@ -75,6 +77,7 @@ function TodoBlockComponent({
           initialContent={block.content || ''}
           onUpdate={handleTextUpdate}
           forceSyncToken={forceSyncToken}
+          autoFocus={autoFocus}
         />
       </div>
     </div>

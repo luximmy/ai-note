@@ -5,9 +5,11 @@ import { memo, useCallback, useRef, useEffect } from 'react';
 function CodeBlockComponent({
   block,
   onUpdate,
+  autoFocus,
 }: {
   block: CodeBlockType;
   onUpdate?: (id: string, updates: Partial<CodeBlockType>) => void;
+  autoFocus?: boolean;
 }) {
   const { isExecuting, language } = block.attributes;
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -20,7 +22,14 @@ function CodeBlockComponent({
     [block.id, onUpdate],
   );
 
-  // 2. 自动调整 textarea 的高度以适应代码行数
+  // 2. 自动聚焦
+  useEffect(() => {
+    if (autoFocus && textareaRef.current) {
+      textareaRef.current.focus();
+    }
+  }, [autoFocus]);
+
+  // 3. 自动调整 textarea 的高度以适应代码行数
   useEffect(() => {
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
