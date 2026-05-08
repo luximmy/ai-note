@@ -12,6 +12,7 @@ interface RichTextEditorProps {
   onUpdate: (content: string) => void;
   onSlashCommand?: (item: SlashMenuItem) => void; // 新增：供外层接管插入逻辑
   forceSyncToken?: number;
+  autoFocus?: boolean;
 }
 
 export function RichTextEditor({
@@ -19,6 +20,7 @@ export function RichTextEditor({
   onUpdate,
   onSlashCommand,
   forceSyncToken = 0,
+  autoFocus = false,
 }: RichTextEditorProps) {
   const isComposingRef = useRef(false);
   const onUpdateRef = useRef(onUpdate);
@@ -45,6 +47,7 @@ export function RichTextEditor({
 
   const editor = useEditor({
     immediatelyRender: false,
+    autofocus: autoFocus ? 'end' : false,
     extensions: [
       StarterKit.configure({
         heading: false,

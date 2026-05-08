@@ -9,12 +9,14 @@ function ParagraphBlockComponent({
   onUpdate,
   onInsert,
   forceSyncToken,
+  autoFocus,
 }: {
   block: ParagraphBlockType;
   // 更新类型契约
   onUpdate?: (id: string, updates: Partial<ParagraphBlockType>) => void;
   onInsert?: (afterBlockId: string, item: SlashMenuItem) => void;
   forceSyncToken?: number;
+  autoFocus?: boolean;
 }) {
   const handleUpdate = useCallback(
     (newContent: string) => {
@@ -37,6 +39,7 @@ function ParagraphBlockComponent({
           }
         }}
         forceSyncToken={forceSyncToken}
+        autoFocus={autoFocus}
       />
     </div>
   );
