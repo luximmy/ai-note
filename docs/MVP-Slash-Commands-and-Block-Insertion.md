@@ -42,6 +42,13 @@
 - 真实后端接入（当前仍为 Mock-First）
 - 移动端适配
 
+### 2.3 已知限制
+
+- **CodeBlock 不支持斜杠指令**：`CodeBlock` 使用原生 `<textarea>` 而非 `RichTextEditor`，不接收 `onInsert`，无法通过 `/` 键触发菜单。用户需先在其他区块中插入代码块，再在其中编辑。
+- **CodeBlock 不支持 `forceSyncToken` 回滚**：CodeBlock 的 `textarea` 通过 `block.content` 受控，回滚依赖父组件状态刷新，但无显式的 `setContent` 同步机制。
+- **插入成功后未替换临时 ID**：`insertBlock` 在 `addBlockAction` 成功后仅记录日志，未用返回的真实 `blockId` 替换临时 ID。
+- **新区块无自动聚焦**：`autoFocusToken` 机制未实现，插入新区块后不会自动获得焦点。
+
 ## 3. 技术设计
 
 ### 3.1 组件架构

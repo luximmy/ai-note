@@ -6,6 +6,7 @@
 - **语言**: TypeScript (严格模式)
 - **包管理器**: `pnpm` (统一使用 `pnpm install`, `pnpm dev`, `pnpm add`)
 - **样式引擎**: Tailwind CSS + `shadcn/ui`
+- **通知组件**: `sonner` (toast 通知)
 - **状态管理**: `zustand` (跨组件全局状态) + 场景化本地状态策略（`useOptimistic` / 双缓冲）
 - **富文本/画布底层**: Tiptap (Headless 模式) — 已接入，`RichTextEditor` 基于 `@tiptap/react` + `StarterKit`
 - **AI 交互引擎**: Vercel AI SDK (`ai` & `@ai-sdk/react`) — *规划中，尚未接入*
@@ -23,13 +24,16 @@ ai-note/
 ├── src/
 │   ├── actions/             # Server Actions (数据请求与逻辑代理层)
 │   ├── app/                 # 路由层 (仅包含页面骨架与 Layout)
-│   ├── components/          # 视图层 (拆分为 ui, editor, ai, layout 四大子模块)
-│   ├── hooks/               # 自定义 React Hooks（目录待建立）
-│   ├── lib/                 # 纯函数与第三方库实例化 (如 utils.ts)
+│   ├── components/          # 视图层
+│   │   ├── ai/              #   AI 组件 (如 TaskBoard)
+│   │   ├── editor/          #   编辑器核心 (BlockRenderer, RichTextEditor, SlashMenu)
+│   │   │   ├── blocks/      #     区块组件 (ParagraphBlock, HeadingBlock, ...)
+│   │   │   └── __tests__/   #     编辑器测试
+│   │   └── ui/              #   通用 UI 组件 (shadcn/ui)
+│   ├── lib/                 # 纯函数与工具 (utils.ts, telemetry.ts)
 │   ├── mock/                # Mock 数据中心 (提供高保真 JSON 数据与模拟延迟)
 │   ├── store/               # Zustand 全局状态定义
 │   └── types/               # TypeScript 全局接口定义 (如 Block Schema)
-├── tailwind.config.ts
 └── pnpm-lock.yaml           # 锁定依赖版本
 ```
 

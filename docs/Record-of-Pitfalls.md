@@ -100,3 +100,12 @@
 
 - **补齐内容**：已落地 `loading`、`error`、保存成功、保存失败回滚四条最小回归路径测试。
 - **工程收益**：后续重构保存链路和区块注册表时，可通过自动化测试快速发现行为回归。
+
+## 10. CodeBlock 与编辑器体系的隔离问题
+
+`CodeBlock` 使用原生 `<textarea>` 而非 `RichTextEditor`，导致它与编辑器体系存在两处隔离：
+
+- **斜杠指令不可用**：`CodeBlock` 不接收 `onInsert`，且 `<textarea>` 不走 Tiptap 的按键拦截链路，用户无法在代码块内触发 `/` 菜单。
+- **回滚机制不对称**：其他区块通过 `RichTextEditor` 的 `forceSyncToken` + `editor.commands.setContent()` 实现显式回滚同步；`CodeBlock` 的 `textarea.value` 由 `block.content` 受控，回滚依赖父组件 `setState` 触发重渲染，但无显式的 `setContent` 调用。在快速编辑场景下，`textarea` 的内部光标位置可能与回滚后的内容不一致。
+
+**根因**：MVP 阶段为快速交付，`CodeBlock` 选择了最简实现（textarea），未接入 `RichTextEditor` 体系。后续如需统一，应将 `CodeBlock` 的编辑区域替换为 Tiptap 的 CodeBlock 扩展，或在 textarea 中显式监听 `forceSyncToken` 变化并调用 `textarea.setSelectionRange` 修复光标。

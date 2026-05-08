@@ -25,22 +25,22 @@
 - [x] **`generative_ui` 渲染闭环完成**：`BlockRenderer` 已注册 `generative_ui`，并接入 `GenerativeUIBlock` 的 streaming/error/completed 三态渲染。
 - [x] **并发提交乱序防护完成**：区块保存链路已引入请求序号（`requestSeqRef` + `lastResolvedVersionRef`），旧响应不会覆盖新状态。
 - [x] **最小测试集已落地**：已覆盖 `loading`、`error`、区块保存成功、保存失败回滚等核心路径（Vitest + Testing Library）。
-- [x] **GenerativeUIBlock 单元测试已编写**：覆盖 streaming/error/未知组件/异常 props 四条回归路径（`GenerativeUIBlock.test.tsx`，待提交至版本库）。
+- [x] **GenerativeUIBlock 单元测试已编写**：覆盖 streaming/error/未知组件/异常 props 四条回归路径（`GenerativeUIBlock.test.tsx`）。
 - [x] **stale save 覆盖修复完成**：已防止旧的区块保存响应覆盖新状态。
 - [x] **斜杠指令 MVP 交付完成**：已实现 `/` 键触发悬浮菜单、键盘/鼠标交互、区块乐观插入与失败回滚、Heading/Code 可编辑化，详见 `docs/MVP-Slash-Commands-and-Block-Insertion.md`。
 - [x] **Tiptap 富文本引擎集成完成**：`RichTextEditor` 已基于 Tiptap 实现，支持 StarterKit、Placeholder 扩展、IME 输入兼容。
 - [x] **ESLint 类型安全修复完成**：移除所有 `@typescript-eslint/no-explicit-any` 错误与 `no-unused-vars` 警告。
+- [x] **动态分发类型豁免与 AI props 收敛（P0）**：`BlockRenderer` 动态分发豁免压缩到 `React.ElementType` 单一调用点；`GenerativeUIBlock` 导出 `KNOWN_COMPONENT_IDS` 白名单，新增 `sanitizeProps` 运行时防护，移除所有 `as any` 断言。
+- [x] **保存链路可观测性（P0）**：已新增 `src/lib/telemetry.ts`，`BlockRenderer` 中所有保存路径（成功/失败/回滚/乱序）均通过 `emitSaveEvent` 输出结构化事件。
 
 ## 3. 进行中的任务 (In Progress)
 
-- [x] **动态分发类型豁免与 AI props 收敛**：`BlockRenderer` 动态分发豁免压缩到 `React.ElementType` 单一调用点；`GenerativeUIBlock` 导出 `KNOWN_COMPONENT_IDS` 白名单，新增 `sanitizeProps` 运行时防护，移除所有 `as any` 断言。
-- [x] **保存链路可观测性**：已新增 `src/lib/telemetry.ts`，`BlockRenderer` 中所有保存路径（成功/失败/回滚/乱序）均通过 `emitSaveEvent` 输出结构化事件。
 - [ ] **Mock 到真实后端迁移预案未固化**：需明确 Action 层协议（幂等键、版本字段、错误码语义）以降低切换成本。
 
 ## 4. 下一阶段任务派发 (Next Steps)
 
-1. **任务 4.1（P0）**：收敛 Schema 源头的 AI props 类型，保留并审计动态注册表分发处的局部类型豁免，建立可扩展的类型安全注册表。
-2. **任务 4.2（P0）**：为保存链路补充可观测性指标与日志规范，形成“可定位、可回放”的故障闭环。
+1. ~~**任务 4.1（P0）**~~ ✅ 已完成：类型收敛与白名单防护。
+2. ~~**任务 4.2（P0）**~~ ✅ 已完成：可观测性埋点已落地。
 3. **任务 4.3（P1）**：定义真实后端接入协议（版本字段、冲突策略、错误码映射、幂等设计）。
 4. **任务 4.4（P1）**：为 `generative_ui` 增加组件白名单校验、降级策略与回归测试样例。
 5. **任务 4.5（P2）**：补充端到端编辑流测试（跨区块快速编辑、切页中断、失败恢复）。
@@ -48,9 +48,9 @@
 
 ## 5. 关键备注 (Context Memo)
 
-- **当前进展结论**：阶段二目标已达成，编辑器核心交互链路（渲染、保存、回滚、最小测试）已形成闭环。
-- **主要风险**：风险已从”功能缺失”转向”工程质量”，集中在 Schema 类型源头、AI 组件运行时安全、可观测性与后端迁移协议。
-- **执行建议**：优先完成任务 4.1 与 4.2，随后并行推进 4.3 与 4.4，最后补齐 4.5 端到端验证。
+- **当前进展结论**：阶段二目标已达成，P0 任务（类型收敛、可观测性）已交付，编辑器核心交互链路形成闭环。
+- **主要风险**：风险已从”功能缺失”转向”工程质量”，当前集中在后端迁移协议与端到端测试覆盖。
+- **执行建议**：并行推进 4.3（后端协议）与 4.4（Generative UI 安全），最后补齐 4.5 端到端验证。
 
 ## 6. 技术栈接入状态澄清
 
@@ -58,8 +58,7 @@
 
 | 技术 | 文档中的定位 | 当前代码状态 | 说明 |
 |------|-------------|-------------|------|
-| **Tiptap** | 富文本/画布底层引擎 | **已接入** | `RichTextEditor` 基于 `@tiptap/react` + `StarterKit` + `Placeholder` 实现，支持斜杠指令菜单触发。 |
-| **Vercel AI SDK** (`ai` / `@ai-sdk/react`) | AI 交互引擎 | 未接入，无相关 import | Generative UI 区块当前完全由 Mock 数据驱动，无真实的 AI 调用链路。 |
+| **Vercel AI SDK** (`ai` / `@ai-sdk/react`) | AI 交互引擎 | 已安装依赖，未在代码中 import | Generative UI 区块当前完全由 Mock 数据驱动，无真实的 AI 调用链路。 |
 | **Zustand** | 跨组件全局状态 | 已接入，仅用于 UI 状态 | 当前 Store 仅管理侧边栏/面板开关，未涉及业务数据状态。 |
 
 > **开发策略说明**：本项目采用 Mock-First 策略，Vercel AI SDK 将在对应阶段逐步接入。

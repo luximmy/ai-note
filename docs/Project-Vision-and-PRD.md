@@ -37,7 +37,7 @@
 ## 4. 技术栈架构 (Tech Stack)
 
 - **前端框架**：Next.js 16 (App Router) + React 19 (Server Components)
-- **编辑器底层**：Tiptap / Lexical (无头编辑器模式)
+- **编辑器底层**：Tiptap (无头编辑器模式)
 - **AI 工程**：Vercel AI SDK (处理 Streaming UI 与 Tool Calling)
 - **状态管理**：Zustand (轻量级跨组件同步)
 - **样式/UI**：Tailwind CSS + shadcn/ui (高保真定制)
