@@ -47,7 +47,6 @@
 - **CodeBlock 不支持斜杠指令**：`CodeBlock` 使用原生 `<textarea>` 而非 `RichTextEditor`，不接收 `onInsert`，无法通过 `/` 键触发菜单。用户需先在其他区块中插入代码块，再在其中编辑。
 - **CodeBlock 不支持 `forceSyncToken` 回滚**：CodeBlock 的 `textarea` 通过 `block.content` 受控，回滚依赖父组件状态刷新，但无显式的 `setContent` 同步机制。
 - **插入成功后未替换临时 ID**：`insertBlock` 在 `addBlockAction` 成功后仅记录日志，未用返回的真实 `blockId` 替换临时 ID。
-- **新区块无自动聚焦**：`autoFocusToken` 机制未实现，插入新区块后不会自动获得焦点。
 
 ## 3. 技术设计
 
@@ -156,7 +155,7 @@ export async function addBlockAction(
 - **已完成**：
   - [x] 新增 `insertBlock(afterBlockId, item: SlashMenuItem)` 方法
   - [x] 乐观更新 `blocks` 和 `safeSnapshot`（插入为原子操作，同步推进快照）
-  - [ ] `autoFocusToken` 机制：新区块 mount 时自动聚焦（**未实现，后续迭代**）
+  - [x] `autoFocusBlockId` 机制：插入后通过 `requestAnimationFrame` 清除，所有区块组件均已接入
   - [x] 集成 `addBlockAction`，处理失败回滚（成功后仅日志记录，未替换临时 ID）
   - [x] 插入操作不走防抖，直接同步两个 buffer
 - **交付标准**：从 UI 触发到 Mock 持久化，形成完整的乐观插入 + 失败回滚闭环。
