@@ -3,15 +3,22 @@ import { GenerativeUIBlock as GenerativeUIBlockType } from '@/types';
 import { memo } from 'react';
 import { TaskBoard } from '@/components/ai/TaskBoard';
 
-// 🚀 优化类型 1：定义 AI 组件的通用 Props 基础结构
-// 使用 Record<string, unknown> 代替 any，保证类型安全，防止组件内部随意乱点属性
 export type AIComponentProps = Record<string, unknown>;
 
-// 🚀 优化类型 2：收敛注册表的 any
 const AIComponentRegistry: Record<string, React.FC<AIComponentProps>> = {
   TaskBoard: TaskBoard as React.FC<AIComponentProps>,
-  // 未来新增的 AI 组件统一在此注册，并在断言时确保遵循 AIComponentProps 契约
 };
+
+export const KNOWN_COMPONENT_IDS = Object.keys(
+  AIComponentRegistry,
+) as readonly string[];
+
+function sanitizeProps(raw: unknown): AIComponentProps {
+  if (raw !== null && typeof raw === 'object' && !Array.isArray(raw)) {
+    return raw as AIComponentProps;
+  }
+  return {};
+}
 
 function GenerativeUIBlockComponent({
   block,
@@ -19,7 +26,9 @@ function GenerativeUIBlockComponent({
   block: GenerativeUIBlockType;
 }) {
   const { componentId, status, props } = block.attributes;
-  const TargetComponent = AIComponentRegistry[componentId];
+  const isKnown = KNOWN_COMPONENT_IDS.includes(componentId);
+  const TargetComponent = isKnown ? AIComponentRegistry[componentId] : undefined;
+  const safeProps = sanitizeProps(props);
 
   if (status === 'streaming') {
     return (
@@ -71,8 +80,7 @@ function GenerativeUIBlockComponent({
       <div className='absolute -left-6 top-6 opacity-0 group-hover:opacity-100 transition-opacity text-xs text-indigo-400 font-mono'>
         ✨ AI
       </div>
-      {/* 🚀 优化类型 3：安全的展开注入 */}
-      <TargetComponent {...(props as AIComponentProps)} />
+      <TargetComponent {...safeProps} />
     </div>
   );
 }

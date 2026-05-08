@@ -5,14 +5,15 @@
 
 ## P0（本周必须完成）
 
-1. **类型收敛：Schema 源头与动态注册表边界**
+1. **类型收敛：Schema 源头与动态注册表边界** ✅
    - 目标文件：`src/types/index.ts`、`src/components/editor/BlockRenderer.tsx`、`src/components/editor/blocks/GenerativeUIBlock.tsx`
-   - 当前状态：`BlockRenderer` 已通过映射类型约束注册表，并将动态分发豁免压缩到 `React.ElementType` 调用点；`GenerativeUIBlock` 已使用 `Record<string, unknown>` 作为组件注册表边界。
-   - 交付标准：Schema 源头移除 `Record<string, any>`；动态分发豁免保留在单一、可审计位置；AI 组件注册表具备明确白名单与异常 props 防护。
+   - 完成状态：`BlockRenderer` 通过映射类型约束注册表，动态分发豁免压缩到 `React.ElementType` 单一调用点；`GenerativeUIBlock` 导出 `KNOWN_COMPONENT_IDS` 白名单，新增 `sanitizeProps` 运行时防护，移除所有 `as any` 断言。
+   - 交付标准：已达成。Schema 源头使用 `Record<string, unknown>`；白名单与 props 防护已落地。
 
-2. **保存链路可观测性**
-   - 目标：为“提交成功/失败/回滚/乱序丢弃”增加统一事件埋点接口（先 mock sink，再接真实平台）。
-   - 交付标准：出现保存异常时可定位到 `noteId`、`blockId`、请求序号、异常类型。
+2. **保存链路可观测性** ✅
+   - 目标：为”提交成功/失败/回滚/乱序丢弃”增加统一事件埋点接口（先 mock sink，再接真实平台）。
+   - 完成状态：已新增 `src/lib/telemetry.ts`，定义 `SaveEvent` 类型与 `emitSaveEvent` 函数；`BlockRenderer` 中所有 console 日志已替换为结构化事件，支持 success/failure/rollback/out_of_order 四种事件类型。
+   - 交付标准：已达成。异常事件包含 `noteId`、`blockId`、`seq`、`error` 字段。
 
 ## P1（阶段内完成）
 

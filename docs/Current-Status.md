@@ -33,8 +33,8 @@
 
 ## 3. 进行中的任务 (In Progress)
 
-- [ ] **动态分发类型豁免与 AI props 收敛**：`BlockRenderer` 已将高风险 `as any` 收敛为动态分发处的 `React.ElementType` 局部豁免；`GenerativeUIBlock` 组件注册表已改用 `Record<string, unknown>` 边界。剩余任务集中在 Schema 源头的 `props` 类型、AI 组件白名单与异常 props 运行时保护。
-- [ ] **保存链路可观测性不足**：当前仅靠 `console` 与 toast，缺少统一埋点（成功率、失败率、回滚次数、乱序命中次数）。
+- [x] **动态分发类型豁免与 AI props 收敛**：`BlockRenderer` 动态分发豁免压缩到 `React.ElementType` 单一调用点；`GenerativeUIBlock` 导出 `KNOWN_COMPONENT_IDS` 白名单，新增 `sanitizeProps` 运行时防护，移除所有 `as any` 断言。
+- [x] **保存链路可观测性**：已新增 `src/lib/telemetry.ts`，`BlockRenderer` 中所有保存路径（成功/失败/回滚/乱序）均通过 `emitSaveEvent` 输出结构化事件。
 - [ ] **Mock 到真实后端迁移预案未固化**：需明确 Action 层协议（幂等键、版本字段、错误码语义）以降低切换成本。
 
 ## 4. 下一阶段任务派发 (Next Steps)

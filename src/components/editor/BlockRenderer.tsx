@@ -20,6 +20,7 @@ import { updateBlockAction, addBlockAction } from '@/actions/note';
 
 import { GenerativeUIBlock } from './blocks/GenerativeUIBlock';
 import { SlashMenuItem } from './SlashMenu';
+import { emitSaveEvent } from '@/lib/telemetry';
 
 // 🚀 优化：定义统一的组件 Props 接口，供各个 Block 组件继承和校验
 export interface BlockComponentProps<T extends Block> {
@@ -94,9 +95,13 @@ export function BlockRenderer({
 
           if (currentSeq < lastResolved) {
             // 这是一条迟到的旧响应！如果应用它，会把用户刚输入的新内容覆盖掉。
-            console.warn(
-              `[⚠️ 乱序拦截] 区块 ${blockId} 的过期响应 (seq: ${currentSeq}) 已被丢弃，当前最新: ${lastResolved}`,
-            );
+            emitSaveEvent({
+              type: 'out_of_order',
+              noteId,
+              blockId,
+              seq: currentSeq,
+              timestamp: Date.now(),
+            });
             return; // 💥 直接丢弃，绝对不能推进安全快照！
           }
 
@@ -119,12 +124,24 @@ export function BlockRenderer({
               return b;
             }),
           );
-          console.log(
-            `[🟢 同步成功] 区块 ${blockId} 已落盘 (seq: ${currentSeq})`,
-            updates,
-          );
+          emitSaveEvent({
+            type: 'success',
+            noteId,
+            blockId,
+            seq: currentSeq,
+            timestamp: Date.now(),
+          });
         }
-      } catch {
+      } catch (err) {
+        emitSaveEvent({
+          type: 'failure',
+          noteId,
+          blockId,
+          seq: currentSeq,
+          error: err instanceof Error ? err.message : String(err),
+          timestamp: Date.now(),
+        });
+
         toast.error('区块保存失败', {
           description: '网络抖动，已自动恢复该部分内容。',
           duration: 4000,
@@ -236,9 +253,24 @@ export function BlockRenderer({
         const result = await addBlockAction(noteId, afterBlockId, newBlock);
         if (result.success) {
           // 真实后端可能会替换临时 ID 为真实 ID，这里模拟更新一下
-          console.log(`区块 ${tempId} 插入成功，真实 ID: ${result.blockId}`);
+          emitSaveEvent({
+            type: 'success',
+            noteId,
+            blockId: result.blockId,
+            seq: 0,
+            timestamp: Date.now(),
+          });
         }
-      } catch {
+      } catch (err) {
+        emitSaveEvent({
+          type: 'rollback',
+          noteId,
+          blockId: tempId,
+          seq: 0,
+          error: err instanceof Error ? err.message : String(err),
+          timestamp: Date.now(),
+        });
+
         toast.error('区块插入失败', {
           description: '网络错误，已撤销新建操作。',
         });
