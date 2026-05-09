@@ -7,6 +7,7 @@ import { Separator } from '@/components/ui/separator';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { mockDocuments } from '@/mock/data';
+import { ChatPanel } from '@/components/ai/ChatPanel';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { isSidebarOpen, isAgentPanelOpen } = useAppStore();
@@ -16,7 +17,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     <div className='flex h-screen w-full bg-background overflow-hidden'>
       {/* 1. 左侧栏 (Sidebar) */}
       {isSidebarOpen && (
-        <aside className='w-[260px] h-full border-r bg-zinc-50/50 flex flex-col shrink-0'>
+        <aside className='w-65 h-full border-r bg-zinc-50/50 flex flex-col shrink-0'>
           <div className='p-4 font-bold text-zinc-900'>ai-note</div>
           <ScrollArea className='flex-1 px-3'>
             <div className='space-y-1'>
@@ -58,12 +59,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       {/* 3. 右侧 AI 面板 */}
       {isAgentPanelOpen && (
         <aside className='w-[320px] h-full border-l bg-white flex flex-col shrink-0 shadow-sm'>
-          <div className='p-4 border-bottom flex items-center justify-between'>
+          <div className='p-4 border-b flex items-center justify-between'>
             <span className='font-semibold text-sm'>AI Copilot</span>
           </div>
-          <Separator />
-          <div className='flex-1 p-4 text-sm text-zinc-500 italic'>
-            等待输入指令...
+          <div className='flex-1 overflow-hidden'>
+            <ChatPanel />
           </div>
         </aside>
       )}
