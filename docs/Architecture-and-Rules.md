@@ -9,7 +9,7 @@
 - **通知组件**: `sonner` (toast 通知)
 - **状态管理**: `zustand` (跨组件全局状态) + 场景化本地状态策略（`useOptimistic` / 双缓冲）
 - **富文本/画布底层**: Tiptap (Headless 模式) — 已接入，`RichTextEditor` 基于 `@tiptap/react` + `StarterKit`
-- **AI 交互引擎**: Vercel AI SDK (`ai` & `@ai-sdk/react` & `@ai-sdk/openai`) — 已安装依赖，计划接入 DeepSeek API（OpenAI 兼容协议）
+- **AI 交互引擎**: Vercel AI SDK (`ai` & `@ai-sdk/react` & `@ai-sdk/openai`) — 已接入，通过 DeepSeek API（OpenAI 兼容协议）实现 streaming 对话
 
 ## 2. 工程目录架构 (Directory Structure)
 
@@ -34,7 +34,7 @@ ai-note/
 │   │   └── ui/              #   通用 UI 组件 (shadcn/ui)
 │   ├── lib/                 # 纯函数与工具 (utils.ts, telemetry.ts)
 │   ├── mock/                # Mock 数据中心 (提供高保真 JSON 数据与模拟延迟)
-│   ├── store/               # Zustand 全局状态定义 (含 Agent ↔ Editor 通信)
+│   ├── store/               # Zustand 全局状态定义 (侧边栏/面板开关 + noteContext 笔记上下文，Agent ↔ Editor 通信桥梁)
 │   └── types/               # TypeScript 全局接口定义 (如 Block Schema)
 └── pnpm-lock.yaml           # 锁定依赖版本
 ```
@@ -51,7 +51,7 @@ ai-note/
 
 ### 3.2 状态管理与乐观更新 (Optimistic UI)
 
-- **全局状态**: 仅用于不常变动或需要跨越极大组件树的状态（如：侧边栏折叠状态、当前激活的笔记 ID）。统一放在 `src/store` 使用 Zustand 管理。
+- **全局状态**: 仅用于不常变动或需要跨越极大组件树的状态（如：侧边栏折叠状态、当前激活的笔记 ID、笔记上下文 `noteContext`）。统一放在 `src/store` 使用 Zustand 管理。`noteContext` 由编辑器实时同步，供 AI Chat 注入对话上下文。
 - **高频交互状态（场景化选型）**: 严禁将高频交互直接挂在全局状态上；按“离散事务”与“连续编辑”区分策略：
   1. **离散原子操作**（点赞、勾选、单次提交）：优先使用 `useTransition + useOptimistic`。
   2. **连续输入编辑**（富文本打字、IME 合成、防抖保存）：优先使用“双缓冲状态（active state + safe snapshot）+ 防抖提交 + 失败回滚”。

@@ -1,6 +1,6 @@
 # 阶段三执行清单：AI 能力接入与 Demo 收口
 
-> 更新时间：2026-05-08
+> 更新时间：2026-05-11
 > 目标：接入 DeepSeek API，让 Agent 侧边栏具备真实 AI 对话能力，并支持将 AI 生成内容插入编辑器，形成可演示、可面试的完整闭环。
 
 ## 技术选型
@@ -13,7 +13,7 @@
 
 ## P0：核心 AI 链路打通（必须完成）
 
-### 任务 3.1：环境与 API Route 搭建
+### ~~任务 3.1：环境与 API Route 搭建~~ ✅ 已完成
 
 - **目标文件**：`.env.local`、`src/app/api/chat/route.ts`
 - **内容**：
@@ -22,8 +22,9 @@
   - 创建 `/api/chat` Route Handler，使用 `createOpenAI({ baseURL, apiKey })` 指向 DeepSeek
   - 实现 `streamText` 基础调用，支持 streaming 响应
 - **交付标准**：`curl` 或 Postman 可触发流式对话，返回 DeepSeek 的实时 token 流
+- **完成时间**：2026-05-11
 
-### 任务 3.2：Agent 侧边栏 Chat UI
+### ~~任务 3.2：Agent 侧边栏 Chat UI~~ ✅ 已完成
 
 - **目标文件**：`src/components/ai/ChatPanel.tsx`、`src/app/app/layout.tsx`
 - **内容**：
@@ -33,15 +34,18 @@
   - AI 消息支持 streaming 渲染（逐字显示）
   - 替换 layout 中的"等待输入指令..."占位
 - **交付标准**：用户可在侧边栏与 DeepSeek 实时对话，消息流式渲染
+- **完成时间**：2026-05-11
 
-### 任务 3.3：笔记上下文注入
+### ~~任务 3.3：笔记上下文注入~~ ✅ 已完成
 
-- **目标文件**：`src/app/api/chat/route.ts`、`ChatPanel.tsx`
+- **目标文件**：`src/app/api/chat/route.ts`、`ChatPanel.tsx`、`src/components/editor/BlockRenderer.tsx`、`src/store/index.ts`
 - **内容**：
-  - 前端将当前笔记的标题 + 区块内容序列化为文本，随请求发送
-  - API Route 在 system prompt 中注入笔记上下文，让 AI 知道用户在看什么
+  - Zustand store 新增 `noteContext` 状态，`BlockRenderer` 通过 `useEffect` 将区块内容实时序列化至 store
+  - `ChatPanel` 在 `sendMessage` 时通过 `body: { noteContext }` 动态注入，避免 stale body 问题
+  - API Route 从请求体读取 `noteContext`，在 system prompt 中注入笔记上下文
   - 不做 RAG，纯 prompt 注入（demo 阶段够用，面试时可讲后续向量化方案）
 - **交付标准**：AI 能回答关于当前笔记内容的问题，如"帮我总结这篇笔记"
+- **完成时间**：2026-05-11
 
 ## P1：AI 内容插入编辑器（高价值功能）
 
@@ -81,10 +85,10 @@
 ## 依赖关系
 
 ```
-3.1 (API Route) ──→ 3.2 (Chat UI) ──→ 3.3 (上下文注入)
-                                      ──→ 3.4 (插入编辑器)
-                                           ──→ 3.5 (Generative UI 联动)
-3.2 ──→ 3.6 (UI 打磨) ──→ 3.7 (部署)
+✅ 3.1 (API Route) ──→ ✅ 3.2 (Chat UI) ──→ ✅ 3.3 (上下文注入)
+                                            ──→ 3.4 (插入编辑器)
+                                                 ──→ 3.5 (Generative UI 联动)
+✅ 3.2 ──→ 3.6 (UI 打磨) ──→ 3.7 (部署)
 ```
 
 ## 面试讲点预设

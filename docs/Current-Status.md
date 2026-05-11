@@ -3,9 +3,9 @@
 ## 1. 项目基本信息
 
 - **项目名称**：ai-note
-- **当前阶段**：阶段二（交互闭环完善）已完成；斜杠指令 MVP 已交付；阶段三 P0（类型收敛、可观测性）已完成；进入阶段三 P1（AI 能力接入）
-- **当前重心**：接入 DeepSeek API，实现 Agent 侧边栏真实对话与 AI 内容插入编辑器
-- **上次更新时间**：2026-05-08
+- **当前阶段**：阶段二（交互闭环完善）已完成；斜杠指令 MVP 已交付；阶段三 P0（类型收敛、可观测性）已完成；阶段三 P0（AI 核心链路）已完成；进入阶段三 P1（AI 内容插入编辑器）
+- **当前重心**：AI 内容插入编辑器链路（任务 3.4），让 AI 生成内容可一键插入笔记
+- **上次更新时间**：2026-05-11
 
 ## 2. 已完成里程碑 (Completed)
 
@@ -33,20 +33,21 @@
 - [x] **动态分发类型豁免与 AI props 收敛（P0）**：`BlockRenderer` 动态分发豁免压缩到 `React.ElementType` 单一调用点；`GenerativeUIBlock` 导出 `KNOWN_COMPONENT_IDS` 白名单，新增 `sanitizeProps` 运行时防护，移除所有 `as any` 断言。
 - [x] **保存链路可观测性（P0）**：已新增 `src/lib/telemetry.ts`，`BlockRenderer` 中所有保存路径（成功/失败/回滚/乱序）均通过 `emitSaveEvent` 输出结构化事件。
 - [x] **新区块自动聚焦完成**：所有区块组件（ParagraphBlock、HeadingBlock、TodoBlock、CodeBlock）均已接入 `autoFocus`，插入新区块后自动获得焦点。
+- [x] **DeepSeek API 接入完成**：`/api/chat` Route Handler 已搭建，使用 `@ai-sdk/openai` + DeepSeek baseURL，`streamText` 实现 streaming 对话。
+- [x] **Agent 侧边栏 Chat UI 完成**：`ChatPanel.tsx` 已基于 `useChat` + `DefaultChatTransport` 实现完整聊天界面，含消息列表、流式渲染、加载状态与错误处理。
+- [x] **笔记上下文注入完成**：`BlockRenderer` 通过 `useEffect` 将区块内容实时序列化至 Zustand `noteContext`，`ChatPanel` 在 `sendMessage` 时通过 `body` 动态注入，API Route 在 system prompt 中拼接。
 
 ## 3. 进行中的任务 (In Progress)
 
-- [ ] **DeepSeek API 接入**：创建 `/api/chat` Route Handler，实现 streaming 对话
-- [ ] **Agent 侧边栏 Chat UI**：替换占位 stub，实现完整聊天界面
-- [ ] **AI 内容插入编辑器**：AI 生成内容可通过按钮插入到笔记中
+- [ ] **AI 内容插入编辑器**：AI 生成内容可通过按钮插入到笔记中（任务 3.4）
 
 ## 4. 下一阶段任务派发 (Next Steps)
 
 1. ~~**任务 4.1（P0）**~~ ✅ 已完成：类型收敛与白名单防护。
 2. ~~**任务 4.2（P0）**~~ ✅ 已完成：可观测性埋点已落地。
-3. **任务 3.1（P0）**：环境配置 + `/api/chat` Route Handler 搭建。
-4. **任务 3.2（P0）**：Agent 侧边栏 Chat UI（`useChat` + streaming 渲染）。
-5. **任务 3.3（P0）**：笔记上下文注入（system prompt 塞入当前笔记内容）。
+3. ~~**任务 3.1（P0）**~~ ✅ 已完成：环境配置 + `/api/chat` Route Handler 搭建。
+4. ~~**任务 3.2（P0）**~~ ✅ 已完成：Agent 侧边栏 Chat UI（`useChat` + streaming 渲染）。
+5. ~~**任务 3.3（P0）**~~ ✅ 已完成：笔记上下文注入（Zustand noteContext + sendMessage body 动态注入）。
 6. **任务 3.4（P1）**：AI → 编辑器插入链路（复用 `insertBlock`）。
 7. **任务 3.5（P1）**：Generative UI 联动（AI 返回结构化 JSON → 插入交互组件）。
 8. **任务 3.6（P2）**：UI 打磨 + 部署到 Vercel。
@@ -54,17 +55,15 @@
 
 ## 5. 关键备注 (Context Memo)
 
-- **当前进展结论**：阶段二目标已达成，阶段三 P0（类型收敛、可观测性）已交付，编辑器核心交互链路形成闭环。下一步是接入真实 AI 能力，让 “AI-Native” 名副其实。
-- **主要风险**：风险从”工程质量”转向”AI 链路打通”，核心是 DeepSeek API 接入与 Agent 侧边栏的交互设计。
-- **执行建议**：先打通 API Route + Chat UI 最小闭环（P0），再做编辑器插入联动（P1），最后打磨部署（P2）。
+- **当前进展结论**：阶段二目标已达成，阶段三 P0（类型收敛、可观测性）已交付，阶段三 P0（AI 核心链路：API Route + Chat UI + 上下文注入）已交付，编辑器核心交互链路与 AI 对话链路均形成闭环。下一步是打通 AI → 编辑器的插入链路（任务 3.4）。
+- **主要风险**：风险从”AI 链路打通”转向”AI ↔ 编辑器双向联动”，核心是 ChatPanel 与 BlockRenderer 的跨组件通信。
+- **执行建议**：先做编辑器插入联动（P1），再做 Generative UI 联动（P1），最后打磨部署（P2）。
 
 ## 6. 技术栈接入状态澄清
 
-以下技术在文档中被列为项目依赖，但截至当前阶段 **尚未在代码中实际接入**，属于规划中的技术选型：
+以下技术在文档中被列为项目依赖，截至当前阶段已在代码中实际接入：
 
 | 技术 | 文档中的定位 | 当前代码状态 | 说明 |
 |------|-------------|-------------|------|
-| **Vercel AI SDK** (`ai` / `@ai-sdk/react`) | AI 交互引擎 | 已安装依赖，未在代码中 import | **即将接入**：计划通过 `@ai-sdk/openai` + DeepSeek baseURL 实现真实 AI 调用。 |
-| **Zustand** | 跨组件全局状态 | 已接入，仅用于 UI 状态 | 当前 Store 仅管理侧边栏/面板开关，计划扩展为 Agent ↔ Editor 通信桥梁。 |
-
-> **开发策略说明**：本项目采用 Mock-First 策略，AI 能力接入为阶段三核心任务，详见 `docs/Phase-3-Execution-Plan.md`。
+| **Vercel AI SDK** (`ai` / `@ai-sdk/react` / `@ai-sdk/openai`) | AI 交互引擎 | **已接入** | `route.ts` 使用 `streamText` + `createOpenAI` 调用 DeepSeek；`ChatPanel.tsx` 使用 `useChat` + `DefaultChatTransport`。 |
+| **Zustand** | 跨组件全局状态 | **已接入，扩展为 Agent ↔ Editor 通信桥梁** | Store 管理侧边栏/面板开关 + `noteContext`（笔记上下文），供 ChatPanel 注入 AI 对话。 |
