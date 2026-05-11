@@ -7,6 +7,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { useEffect, useRef, useState } from 'react';
 import { useAppStore } from '@/store';
+import { PlusCircle } from 'lucide-react';
 // ✨ 1. 引入 Markdown 相关组件
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -55,27 +56,24 @@ export function ChatPanel() {
           ) : (
             <div className='space-y-6 pb-4'>
               {messages.map((m) => (
-                // 💡 修复 1：最外层包裹器加上 w-full 和 min-w-0，防止宽度计算失效
                 <div
                   key={m.id}
-                  className={`flex flex-col w-full min-w-0 ${
+                  // 💡 必须在这里加上 group，为了让鼠标悬浮时才显示插入按钮
+                  className={`group flex flex-col w-full min-w-0 ${
                     m.role === 'user' ? 'items-end' : 'items-start'
                   }`}
                 >
                   <div className='text-xs font-semibold text-zinc-500 mb-1.5'>
                     {m.role === 'user' ? 'You' : '✨ AI Copilot'}
                   </div>
-
-                  {/* 💡 修复 2：气泡层必须加上 min-w-0，强制允许它比内部的代码块更窄！*/}
                   <div
-                    className={`text-sm px-4 py-3 rounded-2xl max-w-[92%] min-w-0 grid leading-relaxed shadow-sm ${
+                    className={`text-sm px-4 py-3 rounded-2xl max-w-[92%] min-w-0 leading-relaxed shadow-sm ${
                       m.role === 'user'
                         ? 'bg-zinc-900 text-zinc-50 rounded-tr-sm'
                         : 'bg-zinc-50 text-zinc-800 rounded-tl-sm border border-zinc-100'
                     }`}
                   >
                     {m.role === 'user' ? (
-                      // 用户消息
                       <div className='wrap-break-word'>
                         {m.parts?.map((part, index) => {
                           if (part.type === 'text')
@@ -84,8 +82,6 @@ export function ChatPanel() {
                         })}
                       </div>
                     ) : (
-                      // 💡 修复 3：Markdown 容器加上 w-full 和 min-w-0
-                      // 并通过 prose-pre:max-w-full prose-pre:overflow-x-auto 把代码块牢牢锁在气泡内部
                       <div
                         className='markdown-content prose prose-sm prose-zinc w-full min-w-0 max-w-none wrap-break-word
                         prose-headings:text-zinc-900 prose-headings:font-bold prose-headings:my-2
@@ -104,6 +100,28 @@ export function ChatPanel() {
                       </div>
                     )}
                   </div>
+                  {m.role !== 'user' && (
+                    <div className='flex items-center gap-2 mt-1.5 opacity-0 group-hover:opacity-100 transition-opacity'>
+                      <Button
+                        variant='ghost'
+                        className='h-6 px-2 text-[11px] text-zinc-400 hover:text-zinc-900 bg-zinc-100 hover:bg-zinc-200'
+                        onClick={() => {
+                          const fullText = m.parts
+                            .filter((p) => p.type === 'text')
+                            .map((p) => (p as any).text)
+                            .join('');
+
+                          // 触发事件总线
+                          useAppStore.getState().triggerInsert({
+                            type: 'paragraph', // 测试：一律作为段落插入
+                            content: fullText,
+                          });
+                        }}
+                      >
+                        ＋ 插入到画布
+                      </Button>
+                    </div>
+                  )}
                 </div>
               ))}
 

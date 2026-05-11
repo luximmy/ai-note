@@ -54,6 +54,7 @@ export function BlockRenderer({
 }) {
   const router = useRouter();
   const setNoteContext = useAppStore((state) => state.setNoteContext); // ✨ 取出更新方法
+  const { pendingInsertBlock, clearInsert } = useAppStore();
 
   const [blocks, setBlocks] = useState<Block[]>(initialBlocks);
   const [safeSnapshot, setSafeSnapshot] = useState<Block[]>(initialBlocks);
@@ -309,6 +310,26 @@ export function BlockRenderer({
     },
     [noteId],
   );
+
+  useEffect(() => {
+    if (pendingInsertBlock) {
+      // 找到当前画布的最后一个区块 ID，作为插入基准
+      const lastBlockId = blocks[blocks.length - 1]?.id;
+
+      // 调用现有的乐观更新插入逻辑
+      insertBlock(lastBlockId, {
+        type: pendingInsertBlock.type,
+        label: '', // 这里的参数兼容 SlashMenuItem
+        icon: '',
+        desc: '',
+        // 扩展 insertBlock 使其支持初始 content
+      } as any);
+
+      // 执行完立即清空 Store 指令，防止重复触发
+      clearInsert();
+      toast.success('已成功插入到画布末尾');
+    }
+  }, [pendingInsertBlock, blocks, insertBlock, clearInsert]);
 
   if (!blocks || blocks.length === 0) {
     return <div className='text-zinc-400 italic p-4'>暂无内容</div>;
