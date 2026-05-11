@@ -35,7 +35,7 @@ ai-note/
 │   │   └── ui/              #   通用 UI 组件 (shadcn/ui)
 │   ├── lib/                 # 纯函数与工具 (utils.ts, telemetry.ts)
 │   ├── mock/                # Mock 数据中心 (提供高保真 JSON 数据与模拟延迟)
-│   ├── store/               # Zustand 全局状态定义 (侧边栏/面板开关 + noteContext 笔记上下文，Agent ↔ Editor 通信桥梁)
+│   ├── store/               # Zustand 全局状态定义 (侧边栏/面板开关 + noteContext 笔记上下文 + pendingInsertBlock 事件总线)
 │   └── types/               # TypeScript 全局接口定义 (如 Block Schema)
 └── pnpm-lock.yaml           # 锁定依赖版本
 ```

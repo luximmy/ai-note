@@ -50,15 +50,16 @@
 
 ## P1：AI 内容插入编辑器（高价值功能）
 
-### 任务 3.4：AI → 编辑器插入链路
+### ~~任务 3.4：AI → 编辑器插入链路~~ ✅ 已完成
 
-- **目标文件**：`src/components/ai/ChatPanel.tsx`、`src/components/editor/BlockRenderer.tsx`、`src/app/app/layout.tsx`
+- **目标文件**：`src/components/ai/ChatPanel.tsx`、`src/components/editor/BlockRenderer.tsx`、`src/store/index.ts`
 - **内容**：
-  - AI 回复中识别可插入内容（文本段落、代码块等）
-  - ChatPanel 提供"插入到笔记"按钮，点击后调用 BlockRenderer 的 `insertBlock`
-  - 需要 layout 层打通 ChatPanel 与 BlockRenderer 的通信（通过 Zustand store 或 context + callback）
-  - 支持插入 paragraph、heading、code 三种基础区块类型
+  - Zustand store 新增 `pendingInsertBlock` 事件总线（`triggerInsert` / `clearInsert`），实现 ChatPanel → BlockRenderer 的跨组件通信
+  - `ChatPanel` AI 消息悬浮显示"插入到画布"按钮（`group-hover` 触发），点击后提取全文并调用 `triggerInsert`
+  - `BlockRenderer` 通过 `useEffect` 监听 `pendingInsertBlock`，复用现有 `insertBlock` 乐观更新链路追加内容至画布末尾
+  - 当前以 paragraph 类型插入，后续可扩展 heading/code 类型识别
 - **交付标准**：用户对 AI 说"帮我写一个总结"，AI 生成内容后，用户点击插入按钮，内容出现在编辑器中
+- **完成时间**：2026-05-11
 
 ### 任务 3.5：Generative UI 联动（可选进阶）
 
@@ -88,7 +89,7 @@
 
 ```
 ✅ 3.1 (API Route) ──→ ✅ 3.2 (Chat UI) ──→ ✅ 3.3 (上下文注入)
-                                            ──→ 3.4 (插入编辑器)
+                                            ──→ ✅ 3.4 (插入编辑器)
                                                  ──→ 3.5 (Generative UI 联动)
 ✅ 3.2 ──→ 3.6 (UI 打磨) ──→ 3.7 (部署)
 ```

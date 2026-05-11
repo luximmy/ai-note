@@ -3,8 +3,8 @@
 ## 1. 项目基本信息
 
 - **项目名称**：ai-note
-- **当前阶段**：阶段二（交互闭环完善）已完成；斜杠指令 MVP 已交付；阶段三 P0（类型收敛、可观测性）已完成；阶段三 P0（AI 核心链路）已完成；进入阶段三 P1（AI 内容插入编辑器）
-- **当前重心**：AI 内容插入编辑器链路（任务 3.4），让 AI 生成内容可一键插入笔记
+- **当前阶段**：阶段二（交互闭环完善）已完成；斜杠指令 MVP 已交付；阶段三 P0（类型收敛、可观测性）已完成；阶段三 P0（AI 核心链路）已完成；阶段三 P1（AI → 编辑器插入）已完成；进入阶段三 P1（Generative UI 联动）
+- **当前重心**：Generative UI 联动（任务 3.5），AI 返回结构化 JSON 触发交互组件插入
 - **上次更新时间**：2026-05-11
 
 ## 2. 已完成里程碑 (Completed)
@@ -39,10 +39,11 @@
 - [x] **AI 回复 Markdown 渲染完成**：`ChatPanel` 接入 `react-markdown` + `remark-gfm`，AI 回复支持代码块、列表、加粗等富文本渲染，引入 `@tailwindcss/typography` 插件。
 - [x] **AI 面板拖拽调整宽度完成**：`layout.tsx` 中 AI 面板支持左侧拖拽手柄，宽度范围 280px-800px。
 - [x] **AI 加载动画完成**：`ChatPanel` 新增三点弹跳 + 文字脉冲的 loading 状态（"正在阅读笔记内容..."）。
+- [x] **AI → 编辑器插入链路完成（任务 3.4）**：Zustand store 新增 `pendingInsertBlock` 事件总线，`ChatPanel` AI 消息悬浮显示"插入到画布"按钮，`BlockRenderer` 监听指令复用 `insertBlock` 乐观更新链路追加内容至画布末尾。
 
 ## 3. 进行中的任务 (In Progress)
 
-- [ ] **AI 内容插入编辑器**：AI 生成内容可通过按钮插入到笔记中（任务 3.4）
+- [ ] **Generative UI 联动**：AI 返回结构化 JSON → 插入交互组件（任务 3.5）
 
 ## 4. 下一阶段任务派发 (Next Steps)
 
@@ -51,16 +52,16 @@
 3. ~~**任务 3.1（P0）**~~ ✅ 已完成：环境配置 + `/api/chat` Route Handler 搭建。
 4. ~~**任务 3.2（P0）**~~ ✅ 已完成：Agent 侧边栏 Chat UI（`useChat` + streaming 渲染）。
 5. ~~**任务 3.3（P0）**~~ ✅ 已完成：笔记上下文注入（Zustand noteContext + sendMessage body 动态注入）。
-6. **任务 3.4（P1）**：AI → 编辑器插入链路（复用 `insertBlock`）。
+6. ~~**任务 3.4（P1）**~~ ✅ 已完成：AI → 编辑器插入链路（Zustand 事件总线 + `insertBlock`）。
 7. **任务 3.5（P1）**：Generative UI 联动（AI 返回结构化 JSON → 插入交互组件）。
 8. **任务 3.6（P2）**：UI 打磨 + 部署到 Vercel。（部分完成：Markdown 渲染、加载动画、面板拖拽已交付）
 9. **执行清单文档**：详见 `docs/Phase-3-Execution-Plan.md`。
 
 ## 5. 关键备注 (Context Memo)
 
-- **当前进展结论**：阶段二目标已达成，阶段三 P0（类型收敛、可观测性）已交付，阶段三 P0（AI 核心链路：API Route + Chat UI + 上下文注入）已交付，编辑器核心交互链路与 AI 对话链路均形成闭环。下一步是打通 AI → 编辑器的插入链路（任务 3.4）。
-- **主要风险**：风险从”AI 链路打通”转向”AI ↔ 编辑器双向联动”，核心是 ChatPanel 与 BlockRenderer 的跨组件通信。
-- **执行建议**：先做编辑器插入联动（P1），再做 Generative UI 联动（P1），最后打磨部署（P2）。
+- **当前进展结论**：阶段三 P0（AI 核心链路）与 P1（AI → 编辑器插入）均已交付，AI ↔ 编辑器双向联动已形成闭环。下一步是 Generative UI 联动（任务 3.5）和部署打磨（P2）。
+- **主要风险**：核心交互链路已打通，剩余风险在于 Generative UI 联动的结构化 JSON 解析与组件映射。
+- **执行建议**：先做 Generative UI 联动（P1），再打磨部署（P2）。
 
 ## 6. 技术栈接入状态澄清
 
@@ -69,5 +70,5 @@
 | 技术 | 文档中的定位 | 当前代码状态 | 说明 |
 |------|-------------|-------------|------|
 | **Vercel AI SDK** (`ai` / `@ai-sdk/react` / `@ai-sdk/openai`) | AI 交互引擎 | **已接入** | `route.ts` 使用 `streamText` + `createOpenAI` 调用 DeepSeek；`ChatPanel.tsx` 使用 `useChat` + `DefaultChatTransport`。 |
-| **Zustand** | 跨组件全局状态 | **已接入，扩展为 Agent ↔ Editor 通信桥梁** | Store 管理侧边栏/面板开关 + `noteContext`（笔记上下文），供 ChatPanel 注入 AI 对话。 |
+| **Zustand** | 跨组件全局状态 | **已接入，扩展为 Agent ↔ Editor 事件总线** | Store 管理侧边栏/面板开关 + `noteContext`（笔记上下文）+ `pendingInsertBlock`（AI → 编辑器插入指令）。 |
 | **react-markdown + remark-gfm** | AI 回复富文本渲染 | **已接入** | `ChatPanel` 使用 `ReactMarkdown` 渲染 AI 回复，支持 GFM 语法（表格、任务列表等），配合 `@tailwindcss/typography` 样式。 |
