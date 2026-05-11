@@ -36,6 +36,9 @@
 - [x] **DeepSeek API 接入完成**：`/api/chat` Route Handler 已搭建，使用 `@ai-sdk/openai` + DeepSeek baseURL，`streamText` 实现 streaming 对话。
 - [x] **Agent 侧边栏 Chat UI 完成**：`ChatPanel.tsx` 已基于 `useChat` + `DefaultChatTransport` 实现完整聊天界面，含消息列表、流式渲染、加载状态与错误处理。
 - [x] **笔记上下文注入完成**：`BlockRenderer` 通过 `useEffect` 将区块内容实时序列化至 Zustand `noteContext`，`ChatPanel` 在 `sendMessage` 时通过 `body` 动态注入，API Route 在 system prompt 中拼接。
+- [x] **AI 回复 Markdown 渲染完成**：`ChatPanel` 接入 `react-markdown` + `remark-gfm`，AI 回复支持代码块、列表、加粗等富文本渲染，引入 `@tailwindcss/typography` 插件。
+- [x] **AI 面板拖拽调整宽度完成**：`layout.tsx` 中 AI 面板支持左侧拖拽手柄，宽度范围 280px-800px。
+- [x] **AI 加载动画完成**：`ChatPanel` 新增三点弹跳 + 文字脉冲的 loading 状态（"正在阅读笔记内容..."）。
 
 ## 3. 进行中的任务 (In Progress)
 
@@ -50,7 +53,7 @@
 5. ~~**任务 3.3（P0）**~~ ✅ 已完成：笔记上下文注入（Zustand noteContext + sendMessage body 动态注入）。
 6. **任务 3.4（P1）**：AI → 编辑器插入链路（复用 `insertBlock`）。
 7. **任务 3.5（P1）**：Generative UI 联动（AI 返回结构化 JSON → 插入交互组件）。
-8. **任务 3.6（P2）**：UI 打磨 + 部署到 Vercel。
+8. **任务 3.6（P2）**：UI 打磨 + 部署到 Vercel。（部分完成：Markdown 渲染、加载动画、面板拖拽已交付）
 9. **执行清单文档**：详见 `docs/Phase-3-Execution-Plan.md`。
 
 ## 5. 关键备注 (Context Memo)
@@ -67,3 +70,4 @@
 |------|-------------|-------------|------|
 | **Vercel AI SDK** (`ai` / `@ai-sdk/react` / `@ai-sdk/openai`) | AI 交互引擎 | **已接入** | `route.ts` 使用 `streamText` + `createOpenAI` 调用 DeepSeek；`ChatPanel.tsx` 使用 `useChat` + `DefaultChatTransport`。 |
 | **Zustand** | 跨组件全局状态 | **已接入，扩展为 Agent ↔ Editor 通信桥梁** | Store 管理侧边栏/面板开关 + `noteContext`（笔记上下文），供 ChatPanel 注入 AI 对话。 |
+| **react-markdown + remark-gfm** | AI 回复富文本渲染 | **已接入** | `ChatPanel` 使用 `ReactMarkdown` 渲染 AI 回复，支持 GFM 语法（表格、任务列表等），配合 `@tailwindcss/typography` 样式。 |

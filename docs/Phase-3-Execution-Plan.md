@@ -10,6 +10,7 @@
 | AI Provider | DeepSeek (`deepseek-chat`) | OpenAI 兼容协议，成本极低（百万 token 几块钱），国内访问稳定 |
 | SDK | Vercel AI SDK (`ai` + `@ai-sdk/react` + `@ai-sdk/openai`) | 已安装依赖，原生支持 streaming、tool calling、React 集成 |
 | API 层 | Next.js Route Handler (`src/app/api/chat/route.ts`) | 服务端调用，API Key 不暴露给客户端 |
+| Markdown 渲染 | `react-markdown` + `remark-gfm` + `@tailwindcss/typography` | AI 回复富文本渲染，支持 GFM 语法 |
 
 ## P0：核心 AI 链路打通（必须完成）
 
@@ -70,11 +71,12 @@
 
 ## P2：体验打磨与部署
 
-### 任务 3.6：UI 打磨
+### 任务 3.6：UI 打磨（部分完成）
 
-- ChatPanel 空态引导（提示用户可以问什么）
-- AI 回复的 Markdown 渲染（代码块、列表、加粗等）
-- 加载状态与错误处理（网络断开、API Key 无效等）
+- ChatPanel 空态引导（提示用户可以问什么）— ✅ 已完成（"有什么我可以帮你的？"）
+- AI 回复的 Markdown 渲染（代码块、列表、加粗等）— ✅ 已完成（`react-markdown` + `remark-gfm` + `@tailwindcss/typography`）
+- 加载状态与错误处理（网络断开、API Key 无效等）— ✅ 加载动画已完成（三点弹跳 + "正在阅读笔记内容..."），错误处理待补充
+- AI 面板拖拽调整宽度 — ✅ 已完成（280px-800px，拖拽手柄）
 
 ### 任务 3.7：部署到 Vercel
 

@@ -10,6 +10,7 @@
 - **状态管理**: `zustand` (跨组件全局状态) + 场景化本地状态策略（`useOptimistic` / 双缓冲）
 - **富文本/画布底层**: Tiptap (Headless 模式) — 已接入，`RichTextEditor` 基于 `@tiptap/react` + `StarterKit`
 - **AI 交互引擎**: Vercel AI SDK (`ai` & `@ai-sdk/react` & `@ai-sdk/openai`) — 已接入，通过 DeepSeek API（OpenAI 兼容协议）实现 streaming 对话
+- **Markdown 渲染**: `react-markdown` + `remark-gfm` + `@tailwindcss/typography` — 已接入，用于 AI 回复的富文本渲染
 
 ## 2. 工程目录架构 (Directory Structure)
 
