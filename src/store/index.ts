@@ -4,20 +4,21 @@ import { create } from 'zustand';
 interface AppState {
   isSidebarOpen: boolean;
   isAgentPanelOpen: boolean;
+  noteContext: string; // ✨ 新增：存储当前活跃的笔记上下文
   toggleSidebar: () => void;
   toggleAgentPanel: () => void;
   setAgentPanelOpen: (isOpen: boolean) => void;
+  setNoteContext: (context: string) => void; // ✨ 新增：更新上下文的方法
 }
 
 export const useAppStore = create<AppState>((set) => ({
-  // 初始状态：左侧边栏默认打开，右侧 AI 面板为了刚才的测试，我们也先设为打开
   isSidebarOpen: true,
   isAgentPanelOpen: true,
-
-  // 状态变更动作 (Actions)
+  noteContext: '', // 初始为空
   toggleSidebar: () =>
     set((state) => ({ isSidebarOpen: !state.isSidebarOpen })),
   toggleAgentPanel: () =>
     set((state) => ({ isAgentPanelOpen: !state.isAgentPanelOpen })),
   setAgentPanelOpen: (isOpen) => set({ isAgentPanelOpen: isOpen }),
+  setNoteContext: (context) => set({ noteContext: context }),
 }));

@@ -21,6 +21,7 @@ import { updateBlockAction, addBlockAction } from '@/actions/note';
 import { GenerativeUIBlock } from './blocks/GenerativeUIBlock';
 import { SlashMenuItem } from './SlashMenu';
 import { emitSaveEvent } from '@/lib/telemetry';
+import { useAppStore } from '@/store';
 
 // 🚀 优化：定义统一的组件 Props 接口，供各个 Block 组件继承和校验
 export interface BlockComponentProps<T extends Block> {
@@ -52,6 +53,7 @@ export function BlockRenderer({
   noteId?: string;
 }) {
   const router = useRouter();
+  const setNoteContext = useAppStore((state) => state.setNoteContext); // ✨ 取出更新方法
 
   const [blocks, setBlocks] = useState<Block[]>(initialBlocks);
   const [safeSnapshot, setSafeSnapshot] = useState<Block[]>(initialBlocks);
@@ -66,6 +68,23 @@ export function BlockRenderer({
   const requestSeqRef = useRef(0);
   // 🚀 核心防线 2：记录每个区块最后一次成功应用的请求序号 (记录本)
   const lastResolvedVersionRef = useRef<Record<string, number>>({});
+
+  useEffect(() => {
+    const contextText = blocks
+      .map((b) => {
+        if (b.type === 'todo')
+          return `[${b.attributes?.checked ? 'x' : ' '}] ${b.content || ''}`;
+        if (b.type === 'heading')
+          return `${'#'.repeat(b.attributes?.level || 1)} ${b.content || ''}`;
+        if (b.type === 'code')
+          return `\`\`\`${b.attributes?.language || ''}\n${b.content || ''}\n\`\`\``;
+        return b.content || '';
+      })
+      .filter(Boolean)
+      .join('\n\n');
+
+    setNoteContext(`当前文档内容如下：\n\n${contextText}`);
+  }, [blocks, setNoteContext]);
 
   useEffect(() => {
     const timers = timersRef.current;

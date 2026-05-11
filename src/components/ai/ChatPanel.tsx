@@ -2,13 +2,21 @@
 'use client';
 
 import { useChat } from '@ai-sdk/react';
+import { DefaultChatTransport } from 'ai';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { useEffect, useRef, useState } from 'react';
+import { useAppStore } from '@/store'; // ✨ 引入 Zustand Store
 
 export function ChatPanel() {
   const [input, setInput] = useState('');
-  const { messages, sendMessage, status } = useChat();
+  const { noteContext } = useAppStore(); // ✨ 获取当前笔记上下文
+  const { messages, sendMessage, status, error } = useChat({
+    // ✨ 4. 适配 5.0 架构，使用 transport 初始化基础端点
+    transport: new DefaultChatTransport({
+      api: '/api/chat',
+    }),
+  });
 
   const isLoading = status === 'submitted' || status === 'streaming';
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -24,8 +32,14 @@ export function ChatPanel() {
     e?.preventDefault();
     if (!input.trim() || isLoading) return;
 
-    // 💡 修复 2：5.0 中极简的发送指令
-    sendMessage({ text: input });
+    // ✨ 5. 核心解法：将动态的上下文作为 requestOptions 传入 sendMessage
+    // 这样每次发消息读取的绝对是 Zustand 中最新的 noteContext，完美避开 Stale Body 陷阱
+    sendMessage(
+      { text: input },
+      {
+        body: { noteContext }, // 这里的数据会被注入进后端的 req.json()
+      },
+    );
     setInput('');
   };
 

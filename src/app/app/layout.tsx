@@ -3,7 +3,6 @@
 
 import { useAppStore } from '@/store';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { mockDocuments } from '@/mock/data';
