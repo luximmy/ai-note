@@ -5,7 +5,7 @@ import { BlockType } from '@/types';
 export interface PendingInsert {
   type: BlockType;
   content: string;
-  attributes?: any;
+  attributes?: Record<string, unknown>;
 }
 
 interface AppState {

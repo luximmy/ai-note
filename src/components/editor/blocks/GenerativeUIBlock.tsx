@@ -4,9 +4,9 @@ import { memo } from 'react';
 import { TaskBoard } from '@/components/ai/TaskBoard';
 
 export type AIComponentProps = {
-  tasks?: any; // 针对 TaskBoard
-  onUpdateProps?: (newProps: Record<string, any>) => void; // ✨ 核心：属性更新回调
-} & Record<string, any>;
+  tasks?: unknown; // 针对 TaskBoard
+  onUpdateProps?: (newProps: Record<string, unknown>) => void; // ✨ 核心：属性更新回调
+} & Record<string, unknown>;
 
 const AIComponentRegistry: Record<string, React.FC<AIComponentProps>> = {
   TaskBoard: TaskBoard as React.FC<AIComponentProps>,
@@ -35,16 +35,14 @@ function GenerativeUIBlockComponent({
   const TargetComponent = isKnown
     ? AIComponentRegistry[componentId]
     : undefined;
-  const safeProps = sanitizeProps(props);
-
   // ✨ 3. 定义局部更新逻辑：当组件内部状态改变时，同步到编辑器的 attributes.props 中
-  const handleComponentUpdate = (newProps: Record<string, any>) => {
+  const handleComponentUpdate = (newProps: Record<string, unknown>) => {
     if (onUpdate) {
       onUpdate(block.id, {
         attributes: {
           ...block.attributes,
           props: {
-            ...(block.attributes.props as Record<string, any>),
+            ...block.attributes.props,
             ...newProps,
           },
         },

@@ -36,7 +36,7 @@ export function TaskBoard({
   onUpdateProps,
 }: {
   tasks?: unknown;
-  onUpdateProps?: (props: any) => void; // ✨ 接收更新回调
+  onUpdateProps?: (props: Record<string, unknown>) => void; // ✨ 接收更新回调
 }) {
   const normalizedTasks = normalizeTasks(tasks);
 
@@ -45,7 +45,7 @@ export function TaskBoard({
     const newTasks = normalizedTasks.map((task) => {
       if (task.id === taskId) {
         // 循环切换状态：todo -> in-progress -> done -> todo
-        const nextStatus: any = {
+        const nextStatus: Task['status'] = {
           todo: 'in-progress',
           'in-progress': 'done',
           done: 'todo',

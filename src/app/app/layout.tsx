@@ -93,7 +93,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         >
           {/* ✨ 拖拽手柄 */}
           <div
-            onPointerDown={(e) => {
+            onPointerDown={() => {
               isDraggingRef.current = true;
               document.body.style.cursor = 'col-resize';
               document.body.style.userSelect = 'none'; // 防止拖拽时选中文字

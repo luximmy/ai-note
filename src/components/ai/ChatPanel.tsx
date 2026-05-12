@@ -7,7 +7,6 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { useEffect, useRef, useState } from 'react';
 import { useAppStore, PendingInsert } from '@/store';
-import { PlusCircle } from 'lucide-react';
 // ✨ 1. 引入 Markdown 相关组件
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -94,7 +93,7 @@ export function ChatPanel() {
                         <ReactMarkdown remarkPlugins={[remarkGfm]}>
                           {m.parts
                             .filter((part) => part.type === 'text')
-                            .map((part) => (part as any).text)
+                            .map((part) => ('text' in part ? part.text : ''))
                             .join('')}
                         </ReactMarkdown>
                       </div>
@@ -108,7 +107,7 @@ export function ChatPanel() {
                         onClick={() => {
                           const fullText = m.parts
                             .filter((p) => p.type === 'text')
-                            .map((p) => (p as any).text)
+                            .map((p) => ('text' in p ? p.text : ''))
                             .join('');
 
                           // 💡 核心：轻量级 Markdown to Blocks 切片引擎

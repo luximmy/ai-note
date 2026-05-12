@@ -252,7 +252,7 @@ export function BlockRenderer({
         content: item.content || '',
         // ✨ 核心修复：优先读取透传的 attributes，如果没有再回退到原有逻辑
         attributes:
-          (item as any).attributes ||
+          ('attributes' in item ? (item as { attributes?: Record<string, unknown> }).attributes : undefined) ||
           (item.level
             ? { level: item.level }
             : item.type === 'generative_ui'
@@ -327,15 +327,15 @@ export function BlockRenderer({
           }) as Block,
       );
 
-      // 2. 一次性追加到画布末尾，避免竞态导致的闪烁
-      setBlocks((prev) => [...prev, ...newBlocks]);
-      setSafeSnapshot((prev) => [...prev, ...newBlocks]);
-
-      // 3. 静默触发网络请求 (为了不阻塞主线程，这里直接遍历发送)
+      // 2. 静默触发网络请求 (为了不阻塞主线程，这里直接遍历发送)
       const lastBlockId = blocks[blocks.length - 1]?.id || 'mock-id';
       newBlocks.forEach((block) => {
         addBlockAction(noteId, lastBlockId, block).catch(() => {});
       });
+
+      // 3. 一次性追加到画布末尾，避免竞态导致的闪烁
+      setBlocks((prev) => [...prev, ...newBlocks]); // eslint-disable-line react-hooks/set-state-in-effect
+      setSafeSnapshot((prev) => [...prev, ...newBlocks]);
 
       clearInsert();
       toast.success(`成功解析并插入 ${newBlocks.length} 个结构化区块`);

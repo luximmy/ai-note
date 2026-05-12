@@ -43,7 +43,7 @@ export interface SlashMenuItem {
   label: string;
   desc: string;
   content?: string;
-  attributes?: any;
+  attributes?: Record<string, unknown>;
 }
 
 const MENU_ITEMS: SlashMenuItem[] = [
