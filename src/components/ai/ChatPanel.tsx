@@ -168,14 +168,25 @@ export function ChatPanel() {
                               return;
                             }
 
-                            // 3. 拦截 Todo 列表 (支持多行连写)
+                            // 3. 拦截 Todo 列表 (逐行处理，支持混合内容)
                             if (text.match(/^- \[( |x|X)\]\s+/)) {
                               const lines = text.split('\n');
+                              let pendingText = '';
+                              const flushPending = () => {
+                                if (pendingText.trim()) {
+                                  blocksToInsert.push({
+                                    type: 'paragraph',
+                                    content: pendingText.trim(),
+                                  });
+                                  pendingText = '';
+                                }
+                              };
                               lines.forEach((line) => {
                                 const todoMatch = line.match(
                                   /^- \[( |x|X)\]\s+(.*)$/,
                                 );
                                 if (todoMatch) {
+                                  flushPending();
                                   blocksToInsert.push({
                                     type: 'todo',
                                     content: todoMatch[2].trim(),
@@ -184,8 +195,11 @@ export function ChatPanel() {
                                         todoMatch[1].toLowerCase() === 'x',
                                     },
                                   });
+                                } else {
+                                  pendingText += (pendingText ? '\n' : '') + line;
                                 }
                               });
+                              flushPending();
                               return;
                             }
 

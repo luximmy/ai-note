@@ -41,7 +41,7 @@
 - [x] **AI 回复 Markdown 渲染完成**：`ChatPanel` 接入 `react-markdown` + `remark-gfm`，AI 回复支持代码块、列表、加粗等富文本渲染，引入 `@tailwindcss/typography` 插件。
 - [x] **AI 面板拖拽调整宽度完成**：`layout.tsx` 中 AI 面板支持左侧拖拽手柄，宽度范围 280px-800px。
 - [x] **AI 加载动画完成**：`ChatPanel` 新增三点弹跳 + 文字脉冲的 loading 状态（"正在阅读笔记内容..."）。
-- [x] **AI → 编辑器插入链路完成（任务 3.4）**：Zustand store 新增 `pendingInsertBlocks` 事件总线，`ChatPanel` AI 消息悬浮显示"插入到画布"按钮，内置 Markdown-to-Blocks 解析引擎（支持 JSON 代码块、代码块、标题、Todo 列表、段落），`BlockRenderer` 监听指令批量追加内容至画布末尾。
+- [x] **AI → 编辑器插入链路完成（任务 3.4）**：Zustand store 新增 `pendingInsertBlockss` 事件总线，`ChatPanel` AI 消息悬浮显示"插入到画布"按钮，内置 Markdown-to-Blocks 解析引擎（支持 JSON 代码块、代码块、标题、Todo 列表、段落），`BlockRenderer` 监听指令批量追加内容至画布末尾。
 - [x] **Generative UI 联动完成（任务 3.5）**：AI system prompt 引导返回 TaskBoard 结构化 JSON，`GenerativeUIBlock` 支持 `onUpdateProps` 回调，`TaskBoard` 支持点击循环切换任务状态（todo → in-progress → done），状态变更同步回编辑器 attributes。
 - [x] **SlashMenu 增强**：`SlashMenuItem` 接口新增 `content?` 和 `attributes?` 字段，支持插入时携带初始内容与属性。
 
@@ -74,5 +74,5 @@
 | 技术 | 文档中的定位 | 当前代码状态 | 说明 |
 |------|-------------|-------------|------|
 | **Vercel AI SDK** (`ai` / `@ai-sdk/react` / `@ai-sdk/openai`) | AI 交互引擎 | **已接入** | `route.ts` 使用 `streamText` + `createOpenAI` 调用 DeepSeek；`ChatPanel.tsx` 使用 `useChat` + `DefaultChatTransport`。 |
-| **Zustand** | 跨组件全局状态 | **已接入，扩展为 Agent ↔ Editor 事件总线** | Store 管理侧边栏/面板开关 + `noteContext`（笔记上下文）+ `pendingInsertBlock`（AI → 编辑器插入指令）。 |
+| **Zustand** | 跨组件全局状态 | **已接入，扩展为 Agent ↔ Editor 事件总线** | Store 管理侧边栏/面板开关 + `noteContext`（笔记上下文）+ `pendingInsertBlocks`（AI → 编辑器插入指令）。 |
 | **react-markdown + remark-gfm** | AI 回复富文本渲染 | **已接入** | `ChatPanel` 使用 `ReactMarkdown` 渲染 AI 回复，支持 GFM 语法（表格、任务列表等），配合 `@tailwindcss/typography` 样式。 |

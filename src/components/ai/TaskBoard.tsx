@@ -45,11 +45,12 @@ export function TaskBoard({
     const newTasks = normalizedTasks.map((task) => {
       if (task.id === taskId) {
         // 循环切换状态：todo -> in-progress -> done -> todo
-        const nextStatus: Task['status'] = {
+        const statusMap = {
           todo: 'in-progress',
           'in-progress': 'done',
           done: 'todo',
-        }[task.status];
+        } as const;
+        const nextStatus = statusMap[task.status];
         return { ...task, status: nextStatus };
       }
       return task;

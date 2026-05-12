@@ -2,6 +2,7 @@
 import { GenerativeUIBlock as GenerativeUIBlockType } from '@/types';
 import { memo } from 'react';
 import { TaskBoard } from '@/components/ai/TaskBoard';
+import { BlockComponentProps } from '../BlockRenderer';
 
 export type AIComponentProps = {
   tasks?: unknown; // 针对 TaskBoard
@@ -26,10 +27,7 @@ function sanitizeProps(raw: unknown): AIComponentProps {
 function GenerativeUIBlockComponent({
   block,
   onUpdate,
-}: {
-  block: GenerativeUIBlockType;
-  onUpdate?: (id: string, updates: Partial<GenerativeUIBlockType>) => void;
-}) {
+}: BlockComponentProps<GenerativeUIBlockType>) {
   const { componentId, status, props } = block.attributes;
   const isKnown = KNOWN_COMPONENT_IDS.includes(componentId);
   const TargetComponent = isKnown

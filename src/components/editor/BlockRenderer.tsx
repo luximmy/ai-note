@@ -57,6 +57,7 @@ export function BlockRenderer({
   const { pendingInsertBlocks, clearInsert } = useAppStore();
 
   const [blocks, setBlocks] = useState<Block[]>(initialBlocks);
+  const blocksRef = useRef<Block[]>(initialBlocks);
   const [safeSnapshot, setSafeSnapshot] = useState<Block[]>(initialBlocks);
   const safeSnapshotRef = useRef<Block[]>(initialBlocks);
   const [forceSyncToken, setForceSyncToken] = useState(0);
@@ -93,6 +94,10 @@ export function BlockRenderer({
       Object.values(timers).forEach(clearTimeout);
     };
   }, []);
+
+  useEffect(() => {
+    blocksRef.current = blocks;
+  }, [blocks]);
 
   useEffect(() => {
     safeSnapshotRef.current = safeSnapshot;
@@ -313,10 +318,9 @@ export function BlockRenderer({
     [noteId],
   );
 
-  // ✨ 监听批量插入指令
+  // ✨ 监听批量插入指令（通过 blocksRef 读取最新 blocks，避免 effect 依赖 blocks）
   useEffect(() => {
     if (pendingInsertBlocks && pendingInsertBlocks.length > 0) {
-      // 1. 批量生成带有独立 ID 的结构化 Block
       const newBlocks = pendingInsertBlocks.map(
         (item, index) =>
           ({
@@ -327,20 +331,28 @@ export function BlockRenderer({
           }) as Block,
       );
 
-      // 2. 静默触发网络请求 (为了不阻塞主线程，这里直接遍历发送)
-      const lastBlockId = blocks[blocks.length - 1]?.id || 'mock-id';
-      newBlocks.forEach((block) => {
-        addBlockAction(noteId, lastBlockId, block).catch(() => {});
-      });
-
-      // 3. 一次性追加到画布末尾，避免竞态导致的闪烁
+      // 乐观更新：先追加到画布（setState in effect 是有意为之：响应外部事件总线指令）
       setBlocks((prev) => [...prev, ...newBlocks]); // eslint-disable-line react-hooks/set-state-in-effect
       setSafeSnapshot((prev) => [...prev, ...newBlocks]);
 
+      // 静默触发网络请求，失败时回滚
+      const lastBlockId = blocksRef.current[blocksRef.current.length - 1]?.id || 'mock-id';
+      const insertedIds = new Set(newBlocks.map((b) => b.id));
+
+      Promise.allSettled(
+        newBlocks.map((block) => addBlockAction(noteId, lastBlockId, block)),
+      ).then((results) => {
+        const failed = results.filter((r) => r.status === 'rejected');
+        if (failed.length > 0) {
+          toast.error(`批量插入：${failed.length} 个区块保存失败，已自动回滚`);
+          setBlocks((prev) => prev.filter((b) => !insertedIds.has(b.id)));
+          setSafeSnapshot((prev) => prev.filter((b) => !insertedIds.has(b.id)));
+        }
+      });
+
       clearInsert();
-      toast.success(`成功解析并插入 ${newBlocks.length} 个结构化区块`);
     }
-  }, [pendingInsertBlocks, blocks, noteId, clearInsert]); // 注意依赖项变更为 pendingInsertBlocks
+  }, [pendingInsertBlocks, noteId, clearInsert]);
 
   if (!blocks || blocks.length === 0) {
     return <div className='text-zinc-400 italic p-4'>暂无内容</div>;

@@ -59,10 +59,12 @@ export async function updateBlockAction(
     }
   }
 
-  console.log(
-    `[Mock Server] 成功持久化保存笔记 ${noteId} 中的区块 ${blockId}`,
-    updatedBlock,
-  );
+  if (process.env.NODE_ENV !== 'production') {
+    console.log(
+      `[Mock Server] 成功持久化保存笔记 ${noteId} 中的区块 ${blockId}`,
+      updatedBlock,
+    );
+  }
   return { success: true, timestamp: Date.now() };
 }
 
@@ -87,7 +89,9 @@ export async function addBlockAction(
     }
   }
 
-  console.log(`[Mock Server] 成功在笔记 ${noteId} 中插入区块 ${newBlock.id}`);
+  if (process.env.NODE_ENV !== 'production') {
+    console.log(`[Mock Server] 成功在笔记 ${noteId} 中插入区块 ${newBlock.id}`);
+  }
 
   // 返回真实的（持久化后的）blockId 和时间戳
   return {

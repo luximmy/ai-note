@@ -2,15 +2,18 @@
 import { TodoBlock as TodoBlockType } from '@/types';
 import { memo, useCallback } from 'react';
 import { RichTextEditor } from '../RichTextEditor';
+import { SlashMenuItem } from '../SlashMenu';
 
 function TodoBlockComponent({
   block,
   onUpdate,
+  onInsert,
   forceSyncToken,
   autoFocus,
 }: {
   block: TodoBlockType;
   onUpdate?: (id: string, updates: Partial<TodoBlockType>) => void;
+  onInsert?: (afterBlockId: string, item: SlashMenuItem) => void;
   forceSyncToken?: number;
   autoFocus?: boolean;
 }) {
@@ -76,6 +79,11 @@ function TodoBlockComponent({
         <RichTextEditor
           initialContent={block.content || ''}
           onUpdate={handleTextUpdate}
+          onSlashCommand={(item) => {
+            if (onInsert) {
+              onInsert(block.id, item);
+            }
+          }}
           forceSyncToken={forceSyncToken}
           autoFocus={autoFocus}
         />

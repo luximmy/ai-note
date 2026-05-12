@@ -24,8 +24,10 @@ export function emitSaveEvent(event: SaveEvent): void {
     out_of_order: '⚠️ 乱序拦截',
   }[event.type];
 
-  console.log(
-    `[${label}] note=${event.noteId} block=${event.blockId} seq=${event.seq}`,
-    event.error ? `error=${event.error}` : '',
-  );
+  if (process.env.NODE_ENV !== 'production') {
+    console.log(
+      `[${label}] note=${event.noteId} block=${event.blockId} seq=${event.seq}`,
+      event.error ? `error=${event.error}` : '',
+    );
+  }
 }

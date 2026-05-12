@@ -27,7 +27,7 @@
 
 - **Generative UI 嵌入（首版已完成）**：已支持在画布中渲染 AI 区块的 streaming/error/completed 三态，并通过组件注册表按 `componentId` 分发。
 - **局部重写 (Refactor)**：选中一段文字，AI 可在当前 Block 原位进行扩写、翻译或逻辑优化。
-- **Agent 侧边栏**：支持基于 RAG 的全局问答，回答需带有笔记来源的引用（Citations）。
+- **Agent 侧边栏（首版已完成）**：已实现基于 prompt 注入的笔记上下文对话，支持 Markdown 渲染与内容插入编辑器。规划中：RAG 向量召回 + Citations 引用溯源。
 
 ### 3.3 知识网络 (Knowledge Network)
 

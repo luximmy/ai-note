@@ -1,7 +1,8 @@
 # 阶段三执行清单：AI 能力接入与 Demo 收口
 
-> 更新时间：2026-05-11
+> 更新时间：2026-05-12
 > 目标：接入 DeepSeek API，让 Agent 侧边栏具备真实 AI 对话能力，并支持将 AI 生成内容插入编辑器，形成可演示、可面试的完整闭环。
+> 完成状态的权威记录见 `docs/Current-Status.md`，本文档侧重执行计划、依赖关系与面试讲点。
 
 ## 技术选型
 
@@ -54,9 +55,9 @@
 
 - **目标文件**：`src/components/ai/ChatPanel.tsx`、`src/components/editor/BlockRenderer.tsx`、`src/store/index.ts`
 - **内容**：
-  - Zustand store 新增 `pendingInsertBlock` 事件总线（`triggerInsert` / `clearInsert`），实现 ChatPanel → BlockRenderer 的跨组件通信
+  - Zustand store 新增 `pendingInsertBlocks` 事件总线（`triggerInsert` / `clearInsert`），实现 ChatPanel → BlockRenderer 的跨组件通信
   - `ChatPanel` AI 消息悬浮显示"插入到画布"按钮（`group-hover` 触发），点击后提取全文并调用 `triggerInsert`
-  - `BlockRenderer` 通过 `useEffect` 监听 `pendingInsertBlock`，复用现有 `insertBlock` 乐观更新链路追加内容至画布末尾
+  - `BlockRenderer` 通过 `useEffect` 监听 `pendingInsertBlocks`，复用现有 `insertBlock` 乐观更新链路追加内容至画布末尾
   - 当前以 paragraph 类型插入，后续可扩展 heading/code 类型识别
 - **交付标准**：用户对 AI 说"帮我写一个总结"，AI 生成内容后，用户点击插入按钮，内容出现在编辑器中
 - **完成时间**：2026-05-11
@@ -67,7 +68,7 @@
 - **内容**：
   - AI system prompt 引导返回 TaskBoard 结构化 JSON（`{ componentId: 'TaskBoard', props: { tasks: [...] } }`）
   - `ChatPanel` 内置 Markdown-to-Blocks 解析引擎：识别 JSON 代码块（generative_ui）、代码块（code）、标题（heading）、Todo 列表（todo）、段落（paragraph），批量派发插入指令
-  - Zustand store 从单条 `pendingInsertBlock` 升级为批量 `pendingInsertBlocks` 数组
+  - Zustand store 从单条 `pendingInsertBlocks` 升级为批量 `pendingInsertBlockss` 数组
   - `BlockRenderer` 支持批量插入，一次性追加多个 Block 并静默触发网络请求
   - `GenerativeUIBlock` 新增 `onUpdate` 回调，实现组件属性变更 → 编辑器 attributes 的双向同步
   - `TaskBoard` 支持点击循环切换任务状态（todo → in-progress → done），状态变更通过 `onUpdateProps` 回传
