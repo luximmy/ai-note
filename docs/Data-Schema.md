@@ -117,6 +117,13 @@ export interface SearchResultFragment {
   content: string; // Block 的文本内容
   noteTitle: string; // 所属文档标题
 }
+
+// 7. AI → 编辑器插入指令接口 (Zustand 事件总线载荷)
+export interface PendingInsert {
+  type: BlockType;
+  content: string;
+  attributes?: Record<string, unknown>;
+}
 ```
 
 ## 落地状态核对
@@ -126,3 +133,4 @@ export interface SearchResultFragment {
 - `Block` 联合类型已纳入 `GenerativeUIBlock`，与编辑器运行时数据一致。
 - 动态注册表分发处仍保留局部、可审计的类型豁免；AI 组件 props 使用 `unknown` 边界，渲染前需通过白名单、normalize 或降级 UI 兜底。
 - Mock 数据中 `doc_004` 使用了 `componentId: 'AlertCard'`，该组件未注册在 `AIComponentRegistry` 中，会触发未知组件降级 UI（amber 色块）。此为刻意行为，用于验证降级策略。
+- `PendingInsert` 接口定义在 `src/store/index.ts`，是 Zustand 事件总线（`pendingInsertBlocks`）的载荷类型，用于 ChatPanel → BlockRenderer 的 AI 内容插入指令。

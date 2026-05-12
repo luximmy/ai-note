@@ -5,7 +5,7 @@
 - **项目名称**：ai-note
 - **当前阶段**：阶段二（交互闭环完善）已完成；斜杠指令 MVP 已交付；阶段三 P0（类型收敛、可观测性）已完成；阶段三 P0（AI 核心链路）已完成；阶段三 P1（AI → 编辑器插入 + Generative UI 联动）已完成；进入阶段三 P2（UI 打磨 + 部署）
 - **当前重心**：UI 打磨与 Vercel 部署（任务 3.6/3.7）
-- **上次更新时间**：2026-05-11
+- **上次更新时间**：2026-05-12
 
 ## 2. 已完成里程碑 (Completed)
 
@@ -15,7 +15,9 @@
 - [x] **首批 Mock 数据落地**：`src/mock/data.ts` 已基于 Schema 提供可用文档与区块样本。
 - [x] **Mock Server Actions 落地**：`src/actions/note.ts` 已实现带延迟/失败率的获取与更新接口。
 - [x] **三栏布局骨架完成**：`src/app/app/layout.tsx` 已实现 Sidebar / Editor / Agent Panel 框架。
+- [x] **笔记列表首页完成**：`src/app/app/page.tsx` 已实现笔记列表入口页面。
 - [x] **详情页加载态完成**：`src/app/app/note/[id]/loading.tsx` 已提供骨架屏体验。
+- [x] **404 页面完成**：`src/app/app/note/[id]/not-found.tsx` 已实现笔记不存在时的友好提示。
 - [x] **区块内容渲染闭环完成**：`src/app/app/note/[id]/page.tsx` 已接入 `BlockRenderer`，可按区块类型渲染页面内容。
 - [x] **错误语义分流完成**：详情页已仅在“404 笔记不存在”时走 `notFound()`，其余异常进入 `error.tsx` 并支持重试。
 - [x] **区块保存与失败回滚已接入**：`src/components/editor/BlockRenderer.tsx` 已接入 `updateBlockAction`、防抖提交、失败回滚与 `router.refresh()` 对齐。

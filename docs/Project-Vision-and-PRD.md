@@ -42,6 +42,7 @@
 - **状态管理**：Zustand (轻量级跨组件同步)
 - **样式/UI**：Tailwind CSS + shadcn/ui (高保真定制)
 - **数据模型**：严格的 TypeScript JSON Schema 定义
+- **可观测性**：自研 `src/lib/telemetry.ts` 埋点，覆盖保存成功/失败/回滚/乱序四条路径，通过 `emitSaveEvent` 输出结构化事件
 
 ## 5. 开发策略：Mock-First (Development Strategy)
 

@@ -40,6 +40,18 @@ ai-note/
 └── pnpm-lock.yaml           # 锁定依赖版本
 ```
 
+**路由层关键文件说明**：
+
+| 文件 | 作用 |
+|------|------|
+| `app/app/page.tsx` | 笔记列表首页 |
+| `app/app/note/[id]/page.tsx` | 笔记详情页 |
+| `app/app/note/[id]/not-found.tsx` | 404 页面（笔记不存在时 `notFound()` 触发） |
+| `app/app/note/[id]/error.tsx` | 错误边界（网络/API 异常时展示重试 UI） |
+| `app/app/note/[id]/loading.tsx` | 骨架屏加载态 |
+
+**通知**：全局使用 `sonner` toast（`import { toast } from 'sonner'`），在 `BlockRenderer`、`ChatPanel` 等组件中用于保存成功/失败等反馈。
+
 ## 3. 核心架构模式 (Core Architecture Patterns)
 
 ### 3.1 渲染边界切分 (RSC vs Client)
@@ -61,7 +73,7 @@ ai-note/
 ### 3.3 数据代理与 Mock-First 机制
 
 - **禁止直接请求**: 前端组件永远不直接调用 Fetch 或真实数据库，必须且只能调用 `src/actions/` 下的 Server Actions。
-- **Mock 契约**: 当前开发阶段，Server Actions 必须显式模拟网络延迟和失败率。读接口默认约 800ms；写接口可按交互体验配置在 300-800ms 区间，并应保持可关闭或可配置，以便联调与验收。
+- **Mock 契约**: 当前开发阶段，Server Actions 必须显式模拟网络延迟和失败率。读接口默认 800ms（5% 失败率）；写接口固定 500ms（15% 失败率），并应保持可关闭或可配置，以便联调与验收。
 
 ### 3.4 AI 调用链路
 
