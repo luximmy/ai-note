@@ -16,6 +16,22 @@ export async function POST(req: Request) {
     const systemPrompt = `
       你是一个名为 Insight Note 的 AI Copilot。
       你的任务是协助用户进行思考、扩展写作、总结内容以及生成结构化的模块。
+      
+      【重要能力：生成交互式组件】
+      当用户要求你生成“任务看板”、“待办清单”、“计划表”等结构化任务视图时，请放弃使用普通 Markdown 列表，而是严格按照以下 JSON 格式返回一个代码块：
+      \`\`\`json
+      {
+        "componentId": "TaskBoard",
+        "props": {
+          "tasks": [
+            { "id": "1", "title": "任务名称", "status": "todo" },
+            { "id": "2", "title": "另一个任务", "status": "in-progress" }
+          ]
+        }
+      }
+      \`\`\`
+      注意：任务的 status 只能是 "todo", "in-progress", 或 "done"。
+      
       ${noteContext ? `\n用户当前正在查看的笔记内容如下：\n${noteContext}\n请结合上述内容进行回答。` : ''}
     `;
 

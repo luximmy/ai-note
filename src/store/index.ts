@@ -2,7 +2,7 @@
 import { create } from 'zustand';
 import { BlockType } from '@/types';
 
-interface PendingInsert {
+export interface PendingInsert {
   type: BlockType;
   content: string;
   attributes?: any;
@@ -13,14 +13,14 @@ interface AppState {
   isAgentPanelOpen: boolean;
   noteContext: string;
   // ✨ 新增：等待插入的区块指令
-  pendingInsertBlock: PendingInsert | null;
+  pendingInsertBlocks: PendingInsert[] | null;
 
   toggleSidebar: () => void;
   toggleAgentPanel: () => void;
   setAgentPanelOpen: (isOpen: boolean) => void;
   setNoteContext: (context: string) => void;
   // ✨ 新增：派发插入指令
-  triggerInsert: (block: PendingInsert) => void;
+  triggerInsert: (blocks: PendingInsert[]) => void; // ✨ 接收数组
   clearInsert: () => void;
 }
 
@@ -28,7 +28,7 @@ export const useAppStore = create<AppState>((set) => ({
   isSidebarOpen: true,
   isAgentPanelOpen: true,
   noteContext: '',
-  pendingInsertBlock: null,
+  pendingInsertBlocks: null,
 
   toggleSidebar: () =>
     set((state) => ({ isSidebarOpen: !state.isSidebarOpen })),
@@ -38,6 +38,6 @@ export const useAppStore = create<AppState>((set) => ({
   setNoteContext: (context) => set({ noteContext: context }),
 
   // ✨ 实现：设置插入指令
-  triggerInsert: (block) => set({ pendingInsertBlock: block }),
-  clearInsert: () => set({ pendingInsertBlock: null }),
+  triggerInsert: (blocks) => set({ pendingInsertBlocks: blocks }),
+  clearInsert: () => set({ pendingInsertBlocks: null }),
 }));

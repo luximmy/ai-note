@@ -31,8 +31,34 @@ function normalizeTasks(value: unknown): Task[] {
   });
 }
 
-export function TaskBoard({ tasks }: { tasks?: unknown }) {
+export function TaskBoard({
+  tasks,
+  onUpdateProps,
+}: {
+  tasks?: unknown;
+  onUpdateProps?: (props: any) => void; // ✨ 接收更新回调
+}) {
   const normalizedTasks = normalizeTasks(tasks);
+
+  // ✨ 2. 实现点击切换逻辑
+  const toggleTaskStatus = (taskId: string | number) => {
+    const newTasks = normalizedTasks.map((task) => {
+      if (task.id === taskId) {
+        // 循环切换状态：todo -> in-progress -> done -> todo
+        const nextStatus: any = {
+          todo: 'in-progress',
+          'in-progress': 'done',
+          done: 'todo',
+        }[task.status];
+        return { ...task, status: nextStatus };
+      }
+      return task;
+    });
+
+    // ✨ 3. 通知编辑器框架保存新状态
+    onUpdateProps?.({ tasks: newTasks });
+  };
+
   const doneCount = normalizedTasks.filter((t) => t.status === 'done').length;
 
   return (
@@ -50,10 +76,12 @@ export function TaskBoard({ tasks }: { tasks?: unknown }) {
         {normalizedTasks.map((task) => (
           <div
             key={task.id}
-            className={`flex items-start gap-3 p-2.5 rounded-lg transition-colors ${
+            // ✨ 4. 绑定点击事件，并加上鼠标手势
+            onClick={() => toggleTaskStatus(task.id)}
+            className={`flex items-start gap-3 p-2.5 rounded-lg transition-colors cursor-pointer ${
               task.status === 'done'
                 ? 'bg-zinc-100/50'
-                : 'bg-white border border-zinc-100 shadow-sm'
+                : 'bg-white border border-zinc-100 shadow-sm hover:border-indigo-200'
             }`}
           >
             {task.status === 'done' ? (

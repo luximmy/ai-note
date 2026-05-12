@@ -3,7 +3,10 @@ import { GenerativeUIBlock as GenerativeUIBlockType } from '@/types';
 import { memo } from 'react';
 import { TaskBoard } from '@/components/ai/TaskBoard';
 
-export type AIComponentProps = Record<string, unknown>;
+export type AIComponentProps = {
+  tasks?: any; // 针对 TaskBoard
+  onUpdateProps?: (newProps: Record<string, any>) => void; // ✨ 核心：属性更新回调
+} & Record<string, any>;
 
 const AIComponentRegistry: Record<string, React.FC<AIComponentProps>> = {
   TaskBoard: TaskBoard as React.FC<AIComponentProps>,
@@ -22,13 +25,32 @@ function sanitizeProps(raw: unknown): AIComponentProps {
 
 function GenerativeUIBlockComponent({
   block,
+  onUpdate,
 }: {
   block: GenerativeUIBlockType;
+  onUpdate?: (id: string, updates: Partial<GenerativeUIBlockType>) => void;
 }) {
   const { componentId, status, props } = block.attributes;
   const isKnown = KNOWN_COMPONENT_IDS.includes(componentId);
-  const TargetComponent = isKnown ? AIComponentRegistry[componentId] : undefined;
+  const TargetComponent = isKnown
+    ? AIComponentRegistry[componentId]
+    : undefined;
   const safeProps = sanitizeProps(props);
+
+  // ✨ 3. 定义局部更新逻辑：当组件内部状态改变时，同步到编辑器的 attributes.props 中
+  const handleComponentUpdate = (newProps: Record<string, any>) => {
+    if (onUpdate) {
+      onUpdate(block.id, {
+        attributes: {
+          ...block.attributes,
+          props: {
+            ...(block.attributes.props as Record<string, any>),
+            ...newProps,
+          },
+        },
+      });
+    }
+  };
 
   if (status === 'streaming') {
     return (
@@ -80,7 +102,11 @@ function GenerativeUIBlockComponent({
       <div className='absolute -left-6 top-6 opacity-0 group-hover:opacity-100 transition-opacity text-xs text-indigo-400 font-mono'>
         ✨ AI
       </div>
-      <TargetComponent {...safeProps} />
+      {/* ✨ 4. 将更新方法注入组件 */}
+      <TargetComponent
+        {...sanitizeProps(props)}
+        onUpdateProps={handleComponentUpdate}
+      />
     </div>
   );
 }

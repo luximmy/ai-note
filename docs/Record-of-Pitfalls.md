@@ -109,3 +109,26 @@
 - **回滚机制不对称**：其他区块通过 `RichTextEditor` 的 `forceSyncToken` + `editor.commands.setContent()` 实现显式回滚同步；`CodeBlock` 的 `textarea.value` 由 `block.content` 受控，回滚依赖父组件 `setState` 触发重渲染，但无显式的 `setContent` 调用。在快速编辑场景下，`textarea` 的内部光标位置可能与回滚后的内容不一致。
 
 **根因**：MVP 阶段为快速交付，`CodeBlock` 选择了最简实现（textarea），未接入 `RichTextEditor` 体系。后续如需统一，应将 `CodeBlock` 的编辑区域替换为 Tiptap 的 CodeBlock 扩展，或在 textarea 中显式监听 `forceSyncToken` 变化并调用 `textarea.setSelectionRange` 修复光标。
+
+## 11. AI ↔ Editor 跨组件通信：事件总线模式
+
+ChatPanel（AI 面板）与 BlockRenderer（编辑器）在组件树中无直接父子关系，无法通过 props 传递回调。
+
+- **方案选型**：对比了三种方案——layout 层 props drilling、React Context、Zustand 事件总线。最终选择 Zustand 事件总线，原因：零耦合、无需修改 layout 组件签名、天然支持批量指令。
+- **实现**：Store 新增 `pendingInsertBlocks: PendingInsert[] | null`，ChatPanel 通过 `triggerInsert(blocks)` 派发，BlockRenderer 通过 `useEffect` 监听并批量插入，插入后立即 `clearInsert()` 防止重复触发。
+- **批量 vs 单条**：初版为单条 `pendingInsertBlock`，后因 Markdown-to-Blocks 解析引擎需要一次性插入多个不同类型区块（段落、代码块、标题等），升级为数组批量派发，避免多次触发导致的 UI 闪烁与竞态。
+
+## 12. AI 回复的 Markdown-to-Blocks 解析引擎
+
+AI 回复是纯文本 Markdown，需要结构化为编辑器的 Block 数组。
+
+- **解析策略**：按空行（`\n\n+`）切分段落，依次尝试 JSON 代码块（generative_ui）→ 代码块（code）→ 标题（heading）→ Todo 列表（todo）→ 段落（paragraph）的优先级匹配。
+- **Generative UI 拦截**：JSON 代码块中若包含 `componentId` 字段，优先解析为 `generative_ui` 区块，携带完整的 `attributes`（componentId、status、props）。解析失败时降级为普通代码块兜底显示。
+- **局限性**：当前解析器基于正则匹配，不支持嵌套列表、表格等复杂 Markdown 语法。后续可考虑接入 `unified` / `remark` AST 解析提升覆盖率。
+
+## 13. Generative UI 双向状态同步
+
+交互式 AI 组件（如 TaskBoard）的状态变更需要同步回编辑器的 Block attributes。
+
+- **通信链路**：`GenerativeUIBlock` 接收 `onUpdate(id, partialBlock)` 回调 → 定义 `handleComponentUpdate(newProps)` → 注入到子组件的 `onUpdateProps` prop → 子组件调用 `onUpdateProps({ tasks: newTasks })` → 编辑器通过 `updateBlockAction` 持久化。
+- **状态循环切换**：TaskBoard 的任务状态采用三态循环（todo → in-progress → done → todo），点击即触发 `onUpdateProps`，无需额外的确认步骤。

@@ -29,7 +29,11 @@ function setClientMounted() {
 }
 
 function useClientMounted() {
-  return useSyncExternalStore(subscribeMount, getMountSnapshot, getMountServerSnapshot);
+  return useSyncExternalStore(
+    subscribeMount,
+    getMountSnapshot,
+    getMountServerSnapshot,
+  );
 }
 
 export interface SlashMenuItem {
@@ -38,6 +42,8 @@ export interface SlashMenuItem {
   icon: string;
   label: string;
   desc: string;
+  content?: string;
+  attributes?: any;
 }
 
 const MENU_ITEMS: SlashMenuItem[] = [
@@ -200,9 +206,7 @@ export function SlashMenu({
             e.stopPropagation();
             onSelect(item);
           }}
-          onMouseEnter={() =>
-            dispatch({ type: 'SET_INDEX', index })
-          }
+          onMouseEnter={() => dispatch({ type: 'SET_INDEX', index })}
           className={`w-full flex items-center gap-3 px-3 py-2 text-left transition-colors ${
             index === selectedIndex
               ? 'bg-zinc-100'

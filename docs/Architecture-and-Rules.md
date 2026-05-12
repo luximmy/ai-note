@@ -69,6 +69,8 @@ ai-note/
 - **Provider 可替换**: 通过 `createOpenAI({ baseURL, apiKey })` 配置 DeepSeek，换 Provider 只改环境变量，不改业务代码。
 - **Streaming 优先**: 所有 AI 响应必须走 streaming，不允许阻塞式等待完整响应。
 - **上下文注入**: 当前笔记内容通过 system prompt 注入，不做客户端 RAG（demo 阶段策略）。
+- **AI → 编辑器插入**: ChatPanel 内置 Markdown-to-Blocks 解析引擎，识别 JSON 代码块（generative_ui）、代码块、标题、Todo、段落，通过 Zustand 事件总线（`pendingInsertBlocks`）批量派发至 BlockRenderer。
+- **Generative UI 双向同步**: `GenerativeUIBlock` 通过 `onUpdateProps` 回调实现组件内部状态变更 → 编辑器 attributes 的双向同步，支持交互式组件（如 TaskBoard 点击切换任务状态）。
 
 ## 4. AI 辅助开发代码规约 (Coding Conventions for AI)
 

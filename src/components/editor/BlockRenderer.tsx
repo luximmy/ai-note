@@ -54,7 +54,7 @@ export function BlockRenderer({
 }) {
   const router = useRouter();
   const setNoteContext = useAppStore((state) => state.setNoteContext); // ✨ 取出更新方法
-  const { pendingInsertBlock, clearInsert } = useAppStore();
+  const { pendingInsertBlocks, clearInsert } = useAppStore();
 
   const [blocks, setBlocks] = useState<Block[]>(initialBlocks);
   const [safeSnapshot, setSafeSnapshot] = useState<Block[]>(initialBlocks);
@@ -246,16 +246,18 @@ export function BlockRenderer({
       // 1. 生成临时 ID (Mock 环境先用时间戳+随机数凑合，真实情况可用 nanoid 或 crypto.randomUUID)
       const tempId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
 
-      // 2. 根据菜单项组装一个新的完整的 Block 对象
       const newBlock: Block = {
         id: tempId,
         type: item.type,
-        content: '',
-        attributes: item.level
-          ? { level: item.level }
-          : item.type === 'generative_ui'
-            ? { componentId: 'TaskBoard', status: 'streaming', props: {} }
-            : {},
+        content: item.content || '',
+        // ✨ 核心修复：优先读取透传的 attributes，如果没有再回退到原有逻辑
+        attributes:
+          (item as any).attributes ||
+          (item.level
+            ? { level: item.level }
+            : item.type === 'generative_ui'
+              ? { componentId: 'TaskBoard', status: 'streaming', props: {} }
+              : {}),
       } as Block;
 
       // 3. 乐观更新：立即将新区块插入到当前 blocks 和 safeSnapshot 数组中
@@ -311,25 +313,34 @@ export function BlockRenderer({
     [noteId],
   );
 
+  // ✨ 监听批量插入指令
   useEffect(() => {
-    if (pendingInsertBlock) {
-      // 找到当前画布的最后一个区块 ID，作为插入基准
-      const lastBlockId = blocks[blocks.length - 1]?.id;
+    if (pendingInsertBlocks && pendingInsertBlocks.length > 0) {
+      // 1. 批量生成带有独立 ID 的结构化 Block
+      const newBlocks = pendingInsertBlocks.map(
+        (item, index) =>
+          ({
+            id: `ai_${Date.now()}_${index}_${Math.random().toString(36).substr(2, 5)}`,
+            type: item.type,
+            content: item.content || '',
+            attributes: item.attributes || {},
+          }) as Block,
+      );
 
-      // 调用现有的乐观更新插入逻辑
-      insertBlock(lastBlockId, {
-        type: pendingInsertBlock.type,
-        label: '', // 这里的参数兼容 SlashMenuItem
-        icon: '',
-        desc: '',
-        // 扩展 insertBlock 使其支持初始 content
-      } as any);
+      // 2. 一次性追加到画布末尾，避免竞态导致的闪烁
+      setBlocks((prev) => [...prev, ...newBlocks]);
+      setSafeSnapshot((prev) => [...prev, ...newBlocks]);
 
-      // 执行完立即清空 Store 指令，防止重复触发
+      // 3. 静默触发网络请求 (为了不阻塞主线程，这里直接遍历发送)
+      const lastBlockId = blocks[blocks.length - 1]?.id || 'mock-id';
+      newBlocks.forEach((block) => {
+        addBlockAction(noteId, lastBlockId, block).catch(() => {});
+      });
+
       clearInsert();
-      toast.success('已成功插入到画布末尾');
+      toast.success(`成功解析并插入 ${newBlocks.length} 个结构化区块`);
     }
-  }, [pendingInsertBlock, blocks, insertBlock, clearInsert]);
+  }, [pendingInsertBlocks, blocks, noteId, clearInsert]); // 注意依赖项变更为 pendingInsertBlocks
 
   if (!blocks || blocks.length === 0) {
     return <div className='text-zinc-400 italic p-4'>暂无内容</div>;

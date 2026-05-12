@@ -61,14 +61,18 @@
 - **交付标准**：用户对 AI 说"帮我写一个总结"，AI 生成内容后，用户点击插入按钮，内容出现在编辑器中
 - **完成时间**：2026-05-11
 
-### 任务 3.5：Generative UI 联动（可选进阶）
+### ~~任务 3.5：Generative UI 联动~~ ✅ 已完成
 
-- **目标文件**：`ChatPanel.tsx`、`BlockRenderer.tsx`
+- **目标文件**：`ChatPanel.tsx`、`BlockRenderer.tsx`、`GenerativeUIBlock.tsx`、`TaskBoard.tsx`、`store/index.ts`、`api/chat/route.ts`
 - **内容**：
-  - AI 可以返回结构化 JSON，触发在编辑器中插入 `generative_ui` 区块
-  - 比如用户说"帮我列一个待办清单"，AI 返回 `{ componentId: 'TaskBoard', props: { tasks: [...] } }`
-  - 复用现有的 GenerativeUIBlock 渲染链路
-- **交付标准**：AI 生成的结构化内容能在编辑器中以交互组件形式渲染
+  - AI system prompt 引导返回 TaskBoard 结构化 JSON（`{ componentId: 'TaskBoard', props: { tasks: [...] } }`）
+  - `ChatPanel` 内置 Markdown-to-Blocks 解析引擎：识别 JSON 代码块（generative_ui）、代码块（code）、标题（heading）、Todo 列表（todo）、段落（paragraph），批量派发插入指令
+  - Zustand store 从单条 `pendingInsertBlock` 升级为批量 `pendingInsertBlocks` 数组
+  - `BlockRenderer` 支持批量插入，一次性追加多个 Block 并静默触发网络请求
+  - `GenerativeUIBlock` 新增 `onUpdate` 回调，实现组件属性变更 → 编辑器 attributes 的双向同步
+  - `TaskBoard` 支持点击循环切换任务状态（todo → in-progress → done），状态变更通过 `onUpdateProps` 回传
+- **交付标准**：AI 生成的结构化内容能在编辑器中以交互组件形式渲染，用户可点击切换任务状态
+- **完成时间**：2026-05-11
 
 ## P2：体验打磨与部署
 
@@ -90,7 +94,7 @@
 ```
 ✅ 3.1 (API Route) ──→ ✅ 3.2 (Chat UI) ──→ ✅ 3.3 (上下文注入)
                                             ──→ ✅ 3.4 (插入编辑器)
-                                                 ──→ 3.5 (Generative UI 联动)
+                                                 ──→ ✅ 3.5 (Generative UI 联动)
 ✅ 3.2 ──→ 3.6 (UI 打磨) ──→ 3.7 (部署)
 ```
 

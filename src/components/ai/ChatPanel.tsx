@@ -6,7 +6,7 @@ import { DefaultChatTransport } from 'ai';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { useEffect, useRef, useState } from 'react';
-import { useAppStore } from '@/store';
+import { useAppStore, PendingInsert } from '@/store';
 import { PlusCircle } from 'lucide-react';
 // ✨ 1. 引入 Markdown 相关组件
 import ReactMarkdown from 'react-markdown';
@@ -67,7 +67,7 @@ export function ChatPanel() {
                     {m.role === 'user' ? 'You' : '✨ AI Copilot'}
                   </div>
                   <div
-                    className={`text-sm px-4 py-3 rounded-2xl max-w-[92%] min-w-0 leading-relaxed shadow-sm ${
+                    className={`text-sm px-4 py-3 rounded-2xl max-w-[92%] min-w-0 grid leading-relaxed shadow-sm ${
                       m.role === 'user'
                         ? 'bg-zinc-900 text-zinc-50 rounded-tr-sm'
                         : 'bg-zinc-50 text-zinc-800 rounded-tl-sm border border-zinc-100'
@@ -111,11 +111,94 @@ export function ChatPanel() {
                             .map((p) => (p as any).text)
                             .join('');
 
-                          // 触发事件总线
-                          useAppStore.getState().triggerInsert({
-                            type: 'paragraph', // 测试：一律作为段落插入
-                            content: fullText,
+                          // 💡 核心：轻量级 Markdown to Blocks 切片引擎
+                          const rawChunks = fullText.split(/\n\n+/); // 按空行切分段落
+                          const blocksToInsert: PendingInsert[] = [];
+
+                          rawChunks.forEach((chunk) => {
+                            const text = chunk.trim();
+                            if (!text) return;
+
+                            const jsonMatch = text.match(
+                              /^```json\n([\s\S]*?)```$/,
+                            );
+                            if (jsonMatch) {
+                              try {
+                                const data = JSON.parse(jsonMatch[1]);
+                                if (data.componentId) {
+                                  blocksToInsert.push({
+                                    type: 'generative_ui', // 触发生成式 UI 区块
+                                    content: '',
+                                    attributes: {
+                                      componentId: data.componentId,
+                                      status: 'completed',
+                                      props: data.props || {},
+                                    },
+                                  });
+                                  return; // 拦截成功，直接跳过后续的普通解析
+                                }
+                              } catch (e) {
+                                console.error('AI 返回的 JSON 格式异常:', e);
+                                // 解析失败的话，会顺延到下面的代码块解析逻辑中兜底显示出来
+                              }
+                            }
+                            // 1. 拦截代码块
+                            const codeMatch = text.match(
+                              /^```(\w*)\n([\s\S]*?)```$/,
+                            );
+                            if (codeMatch) {
+                              blocksToInsert.push({
+                                type: 'code',
+                                content: codeMatch[2].trim(),
+                                attributes: {
+                                  language: codeMatch[1] || 'plaintext',
+                                },
+                              });
+                              return;
+                            }
+
+                            // 2. 拦截标题
+                            const headingMatch =
+                              text.match(/^(#{1,3})\s+(.*)$/);
+                            if (headingMatch) {
+                              blocksToInsert.push({
+                                type: 'heading',
+                                content: headingMatch[2].trim(),
+                                attributes: { level: headingMatch[1].length },
+                              });
+                              return;
+                            }
+
+                            // 3. 拦截 Todo 列表 (支持多行连写)
+                            if (text.match(/^- \[( |x|X)\]\s+/)) {
+                              const lines = text.split('\n');
+                              lines.forEach((line) => {
+                                const todoMatch = line.match(
+                                  /^- \[( |x|X)\]\s+(.*)$/,
+                                );
+                                if (todoMatch) {
+                                  blocksToInsert.push({
+                                    type: 'todo',
+                                    content: todoMatch[2].trim(),
+                                    attributes: {
+                                      checked:
+                                        todoMatch[1].toLowerCase() === 'x',
+                                    },
+                                  });
+                                }
+                              });
+                              return;
+                            }
+
+                            // 4. 兜底：作为普通段落
+                            blocksToInsert.push({
+                              type: 'paragraph',
+                              content: text,
+                            });
                           });
+
+                          // 批量派发指令
+                          useAppStore.getState().triggerInsert(blocksToInsert);
                         }}
                       >
                         ＋ 插入到画布
