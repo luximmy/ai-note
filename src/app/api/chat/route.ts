@@ -2,6 +2,8 @@
 import { createOpenAI } from '@ai-sdk/openai';
 import { streamText, convertToModelMessages } from 'ai';
 
+// ✨ 1. 显式声明使用 Edge Runtime，优化流式输出性能
+export const runtime = 'edge';
 export const maxDuration = 30;
 
 const deepseek = createOpenAI({
@@ -46,6 +48,10 @@ export async function POST(req: Request) {
     return result.toUIMessageStreamResponse();
   } catch (error) {
     console.error('AI API 路由异常:', error);
-    return new Response('API 请求失败', { status: 500 });
+    // ✨ 2. 返回包含明确提示的 500 状态，供前端 useChat 捕获
+    return new Response(
+      JSON.stringify({ error: 'AI 服务调用失败，请检查网络或 API Key' }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } },
+    );
   }
 }

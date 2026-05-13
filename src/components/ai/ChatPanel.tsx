@@ -7,15 +7,17 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { useEffect, useRef, useState } from 'react';
 import { useAppStore, PendingInsert } from '@/store';
-// ✨ 1. 引入 Markdown 相关组件
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+// ✨ 1. 引入 toast 用于错误提示
+import { toast } from 'sonner';
 
 export function ChatPanel() {
   const [input, setInput] = useState('');
   const { noteContext } = useAppStore();
 
-  const { messages, sendMessage, status } = useChat({
+  // ✨ 2. 解构 error 和 reload
+  const { messages, sendMessage, status, error, regenerate } = useChat({
     transport: new DefaultChatTransport({
       api: '/api/chat',
     }),
@@ -28,7 +30,16 @@ export function ChatPanel() {
     if (scrollRef.current) {
       scrollRef.current.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [messages, status]);
+  }, [messages, status, error]); // ✨ 把 error 加入依赖，保证报错时滚动到底部
+
+  // ✨ 3. 监听 error 状态，触发全局 Toast
+  useEffect(() => {
+    if (error) {
+      toast.error('AI 响应失败', {
+        description: error.message || '网络连接中断或 API 密钥无效，请重试。',
+      });
+    }
+  }, [error]);
 
   const onSubmit = (e?: React.SyntheticEvent | React.KeyboardEvent) => {
     e?.preventDefault();
@@ -57,7 +68,6 @@ export function ChatPanel() {
               {messages.map((m) => (
                 <div
                   key={m.id}
-                  // 💡 必须在这里加上 group，为了让鼠标悬浮时才显示插入按钮
                   className={`group flex flex-col w-full min-w-0 ${
                     m.role === 'user' ? 'items-end' : 'items-start'
                   }`}
@@ -99,6 +109,8 @@ export function ChatPanel() {
                       </div>
                     )}
                   </div>
+
+                  {/* ...保留原有的插入到画布的按钮逻辑... */}
                   {m.role !== 'user' && (
                     <div className='flex items-center gap-2 mt-1.5 opacity-0 group-hover:opacity-100 transition-opacity'>
                       <Button
@@ -110,8 +122,7 @@ export function ChatPanel() {
                             .map((p) => ('text' in p ? p.text : ''))
                             .join('');
 
-                          // 💡 核心：轻量级 Markdown to Blocks 切片引擎
-                          const rawChunks = fullText.split(/\n\n+/); // 按空行切分段落
+                          const rawChunks = fullText.split(/\n\n+/);
                           const blocksToInsert: PendingInsert[] = [];
 
                           rawChunks.forEach((chunk) => {
@@ -126,7 +137,7 @@ export function ChatPanel() {
                                 const data = JSON.parse(jsonMatch[1]);
                                 if (data.componentId) {
                                   blocksToInsert.push({
-                                    type: 'generative_ui', // 触发生成式 UI 区块
+                                    type: 'generative_ui',
                                     content: '',
                                     attributes: {
                                       componentId: data.componentId,
@@ -134,14 +145,13 @@ export function ChatPanel() {
                                       props: data.props || {},
                                     },
                                   });
-                                  return; // 拦截成功，直接跳过后续的普通解析
+                                  return;
                                 }
                               } catch (e) {
                                 console.error('AI 返回的 JSON 格式异常:', e);
-                                // 解析失败的话，会顺延到下面的代码块解析逻辑中兜底显示出来
                               }
                             }
-                            // 1. 拦截代码块
+
                             const codeMatch = text.match(
                               /^```(\w*)\n([\s\S]*?)```$/,
                             );
@@ -156,7 +166,6 @@ export function ChatPanel() {
                               return;
                             }
 
-                            // 2. 拦截标题
                             const headingMatch =
                               text.match(/^(#{1,3})\s+(.*)$/);
                             if (headingMatch) {
@@ -168,7 +177,6 @@ export function ChatPanel() {
                               return;
                             }
 
-                            // 3. 拦截 Todo 列表 (逐行处理，支持混合内容)
                             if (text.match(/^- \[( |x|X)\]\s+/)) {
                               const lines = text.split('\n');
                               let pendingText = '';
@@ -196,21 +204,20 @@ export function ChatPanel() {
                                     },
                                   });
                                 } else {
-                                  pendingText += (pendingText ? '\n' : '') + line;
+                                  pendingText +=
+                                    (pendingText ? '\n' : '') + line;
                                 }
                               });
                               flushPending();
                               return;
                             }
 
-                            // 4. 兜底：作为普通段落
                             blocksToInsert.push({
                               type: 'paragraph',
                               content: text,
                             });
                           });
 
-                          // 批量派发指令
                           useAppStore.getState().triggerInsert(blocksToInsert);
                         }}
                       >
@@ -221,7 +228,24 @@ export function ChatPanel() {
                 </div>
               ))}
 
-              {status === 'submitted' && (
+              {/* ✨ 4. 渲染错误兜底 UI 与重试按钮 */}
+              {error && (
+                <div className='flex flex-col items-center justify-center p-4 mt-2 bg-red-50 border border-red-100 rounded-xl'>
+                  <p className='text-xs text-red-600 mb-3 text-center'>
+                    ⚠️ 请求失败：{error.message || '大模型服务暂时无响应'}
+                  </p>
+                  <Button
+                    variant='outline'
+                    size='sm'
+                    onClick={() => regenerate()}
+                    className='h-7 text-xs text-red-600 border-red-200 hover:bg-red-100'
+                  >
+                    重新生成
+                  </Button>
+                </div>
+              )}
+
+              {status === 'submitted' && !error && (
                 <div className='flex flex-col items-start'>
                   <div className='text-xs font-semibold text-zinc-500 mb-1'>
                     ✨ AI Copilot
@@ -256,7 +280,11 @@ export function ChatPanel() {
       <div className='p-4 border-t border-zinc-100 bg-white shrink-0'>
         <form
           onSubmit={onSubmit}
-          className='flex items-end gap-2 bg-zinc-50 border border-zinc-200 p-1.5 rounded-xl focus-within:ring-2 focus-within:ring-zinc-900/20 transition-all'
+          className={`flex items-end gap-2 bg-zinc-50 border p-1.5 rounded-xl transition-all ${
+            error
+              ? 'border-red-300 focus-within:ring-red-900/20'
+              : 'border-zinc-200 focus-within:ring-2 focus-within:ring-zinc-900/20'
+          }`}
         >
           <textarea
             value={input}
