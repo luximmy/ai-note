@@ -21,18 +21,18 @@
 
 - **区块化编辑（已完成）**：已支持段落、标题、代码块、待办项与 `generative_ui` 区块，并形成保存-回滚闭环。
 - **斜杠指令（已完成）**：通过 `/` 键触发悬浮菜单，支持 Paragraph、Heading (H1/H2)、Todo、Code、Generative UI 六种区块类型插入，含乐观更新与失败回滚。
-- **拖拽排序（规划中）**：计划实现 Block 级别拖拽重排，并在离散操作场景引入 `useOptimistic`。
+- **拖拽排序（阶段四 P0）**：计划实现 Block 级别拖拽重排（`@dnd-kit`），含区块删除。详见 `docs/Phase-4-Execution-Plan.md` 任务 4.1。
 
 ### 3.2 AI Agent 交互
 
 - **Generative UI 嵌入（首版已完成）**：已支持在画布中渲染 AI 区块的 streaming/error/completed 三态，并通过组件注册表按 `componentId` 分发。
-- **局部重写 (Refactor)**：选中一段文字，AI 可在当前 Block 原位进行扩写、翻译或逻辑优化。
+- **局部重写 (Refactor)（阶段四 P1）**：选中一段文字，AI 可在当前 Block 原位进行扩写、翻译或逻辑优化。详见 `docs/Phase-4-Execution-Plan.md` 任务 4.2。
 - **Agent 侧边栏（首版已完成）**：已实现基于 prompt 注入的笔记上下文对话，支持 Markdown 渲染与内容插入编辑器。规划中：RAG 向量召回 + Citations 引用溯源。
 
 ### 3.3 知识网络 (Knowledge Network)
 
-- **双向链接**：支持 `[[文件名]]` 联想输入，建立笔记间的硬性关联。
-- **力导向图 (Visual Graph)**：全屏可视化界面，展现笔记间的连接密度，支持点击节点跳转。
+- **双向链接（阶段四 P2）**：支持 `[[文件名]]` 联想输入，建立笔记间的硬性关联。详见 `docs/Phase-4-Execution-Plan.md` 任务 4.3。
+- **力导向图 (Visual Graph)（阶段四 P2）**：全屏可视化界面，展现笔记间的连接密度，支持点击节点跳转。
 
 ## 4. 技术栈架构 (Tech Stack)
 
