@@ -1,6 +1,6 @@
 # 阶段三执行清单：AI 能力接入与 Demo 收口
 
-> 更新时间：2026-05-12
+> 更新时间：2026-05-13
 > 目标：接入 DeepSeek API，让 Agent 侧边栏具备真实 AI 对话能力，并支持将 AI 生成内容插入编辑器，形成可演示、可面试的完整闭环。
 > 完成状态的权威记录见 `docs/Current-Status.md`，本文档侧重执行计划、依赖关系与面试讲点。
 
@@ -68,7 +68,7 @@
 - **内容**：
   - AI system prompt 引导返回 TaskBoard 结构化 JSON（`{ componentId: 'TaskBoard', props: { tasks: [...] } }`）
   - `ChatPanel` 内置 Markdown-to-Blocks 解析引擎：识别 JSON 代码块（generative_ui）、代码块（code）、标题（heading）、Todo 列表（todo）、段落（paragraph），批量派发插入指令
-  - Zustand store 从单条 `pendingInsertBlocks` 升级为批量 `pendingInsertBlockss` 数组
+  - Zustand store 从单条 `pendingInsertBlocks` 升级为批量 `pendingInsertBlocks` 数组
   - `BlockRenderer` 支持批量插入，一次性追加多个 Block 并静默触发网络请求
   - `GenerativeUIBlock` 新增 `onUpdate` 回调，实现组件属性变更 → 编辑器 attributes 的双向同步
   - `TaskBoard` 支持点击循环切换任务状态（todo → in-progress → done），状态变更通过 `onUpdateProps` 回传
@@ -77,12 +77,13 @@
 
 ## P2：体验打磨与部署
 
-### 任务 3.6：UI 打磨（部分完成）
+### ~~任务 3.6：UI 打磨~~ ✅ 已完成
 
 - ChatPanel 空态引导（提示用户可以问什么）— ✅ 已完成（"有什么我可以帮你的？"）
 - AI 回复的 Markdown 渲染（代码块、列表、加粗等）— ✅ 已完成（`react-markdown` + `remark-gfm` + `@tailwindcss/typography`）
-- 加载状态与错误处理（网络断开、API Key 无效等）— ✅ 加载动画已完成（三点弹跳 + "正在阅读笔记内容..."），错误处理待补充
+- 加载状态与错误处理 — ✅ 已完成：加载动画（三点弹跳 + "正在阅读笔记内容..."）+ `sonner` toast 错误通知 + 内联错误 UI（红色警告卡片 + "重新生成"按钮）+ API Route 结构化 JSON 错误响应
 - AI 面板拖拽调整宽度 — ✅ 已完成（280px-800px，拖拽手柄）
+- Edge Runtime 声明 — ✅ 已完成（`/api/chat` 显式声明 `export const runtime = 'edge'`）
 
 ### 任务 3.7：部署到 Vercel
 
@@ -96,7 +97,7 @@
 ✅ 3.1 (API Route) ──→ ✅ 3.2 (Chat UI) ──→ ✅ 3.3 (上下文注入)
                                             ──→ ✅ 3.4 (插入编辑器)
                                                  ──→ ✅ 3.5 (Generative UI 联动)
-✅ 3.2 ──→ 3.6 (UI 打磨) ──→ 3.7 (部署)
+✅ 3.2 ──→ ✅ 3.6 (UI 打磨) ──→ 3.7 (部署)
 ```
 
 ## 面试讲点预设

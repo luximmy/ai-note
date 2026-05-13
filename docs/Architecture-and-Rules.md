@@ -65,10 +65,11 @@ ai-note/
 ### 3.2 状态管理与乐观更新 (Optimistic UI)
 
 - **全局状态**: 仅用于不常变动或需要跨越极大组件树的状态（如：侧边栏折叠状态、当前激活的笔记 ID、笔记上下文 `noteContext`）。统一放在 `src/store` 使用 Zustand 管理。`noteContext` 由编辑器实时同步，供 AI Chat 注入对话上下文。
-- **高频交互状态（场景化选型）**: 严禁将高频交互直接挂在全局状态上；按“离散事务”与“连续编辑”区分策略：
+- **高频交互状态（场景化选型）**: 严禁将高频交互直接挂在全局状态上；按”离散事务”与”连续编辑”区分策略：
   1. **离散原子操作**（点赞、勾选、单次提交）：优先使用 `useTransition + useOptimistic`。
-  2. **连续输入编辑**（富文本打字、IME 合成、防抖保存）：优先使用“双缓冲状态（active state + safe snapshot）+ 防抖提交 + 失败回滚”。
+  2. **连续输入编辑**（富文本打字、IME 合成、防抖保存）：优先使用”双缓冲状态（active state + safe snapshot）+ 防抖提交 + 失败回滚”。
   3. 所有方案都必须具备失败提示、可恢复回滚，以及必要的服务端重新对齐机制（如 `router.refresh()`）。
+  - **当前实现说明**：编辑器（`BlockRenderer`）采用双缓冲策略（`useState` + `useRef`），未使用 React `useOptimistic` hook。原因详见 `docs/Record-of-Pitfalls.md` 第 4 节——`useOptimistic` 的 Transition 时序与防抖窗口容易错位，导致 UI 回跳。
 
 ### 3.3 数据代理与 Mock-First 机制
 

@@ -3,9 +3,9 @@
 ## 1. 项目基本信息
 
 - **项目名称**：ai-note
-- **当前阶段**：阶段二（交互闭环完善）已完成；斜杠指令 MVP 已交付；阶段三 P0（类型收敛、可观测性）已完成；阶段三 P0（AI 核心链路）已完成；阶段三 P1（AI → 编辑器插入 + Generative UI 联动）已完成；进入阶段三 P2（UI 打磨 + 部署）
-- **当前重心**：UI 打磨与 Vercel 部署（任务 3.6/3.7）
-- **上次更新时间**：2026-05-12
+- **当前阶段**：阶段二（交互闭环完善）已完成；斜杠指令 MVP 已交付；阶段三 P0（类型收敛、可观测性）已完成；阶段三 P0（AI 核心链路）已完成；阶段三 P1（AI → 编辑器插入 + Generative UI 联动）已完成；阶段三 P2（UI 打磨）已完成；进入阶段三 P2（Vercel 部署）
+- **当前重心**：Vercel 部署（任务 3.7）
+- **上次更新时间**：2026-05-13
 
 ## 2. 已完成里程碑 (Completed)
 
@@ -41,13 +41,15 @@
 - [x] **AI 回复 Markdown 渲染完成**：`ChatPanel` 接入 `react-markdown` + `remark-gfm`，AI 回复支持代码块、列表、加粗等富文本渲染，引入 `@tailwindcss/typography` 插件。
 - [x] **AI 面板拖拽调整宽度完成**：`layout.tsx` 中 AI 面板支持左侧拖拽手柄，宽度范围 280px-800px。
 - [x] **AI 加载动画完成**：`ChatPanel` 新增三点弹跳 + 文字脉冲的 loading 状态（"正在阅读笔记内容..."）。
-- [x] **AI → 编辑器插入链路完成（任务 3.4）**：Zustand store 新增 `pendingInsertBlockss` 事件总线，`ChatPanel` AI 消息悬浮显示"插入到画布"按钮，内置 Markdown-to-Blocks 解析引擎（支持 JSON 代码块、代码块、标题、Todo 列表、段落），`BlockRenderer` 监听指令批量追加内容至画布末尾。
+- [x] **AI → 编辑器插入链路完成（任务 3.4）**：Zustand store 新增 `pendingInsertBlocks` 事件总线，`ChatPanel` AI 消息悬浮显示"插入到画布"按钮，内置 Markdown-to-Blocks 解析引擎（支持 JSON 代码块、代码块、标题、Todo 列表、段落），`BlockRenderer` 监听指令批量追加内容至画布末尾。
 - [x] **Generative UI 联动完成（任务 3.5）**：AI system prompt 引导返回 TaskBoard 结构化 JSON，`GenerativeUIBlock` 支持 `onUpdateProps` 回调，`TaskBoard` 支持点击循环切换任务状态（todo → in-progress → done），状态变更同步回编辑器 attributes。
 - [x] **SlashMenu 增强**：`SlashMenuItem` 接口新增 `content?` 和 `attributes?` 字段，支持插入时携带初始内容与属性。
+- [x] **AI 错误处理完善**：`ChatPanel` 新增 `sonner` toast 错误通知 + 内联错误 UI（红色警告卡片 + "重新生成"按钮），API Route 返回结构化 JSON 错误响应。
+- [x] **Edge Runtime 声明**：`/api/chat` Route Handler 显式声明 `export const runtime = 'edge'`，优化流式输出性能。
 
 ## 3. 进行中的任务 (In Progress)
 
-- [ ] **UI 打磨（任务 3.6）**：错误处理（网络断开、API Key 无效等）待补充
+- [ ] **任务 3.7：部署到 Vercel**：配置环境变量，验证 streaming 兼容性，产出 live demo 链接
 
 ## 4. 下一阶段任务派发 (Next Steps)
 
@@ -58,14 +60,14 @@
 5. ~~**任务 3.3（P0）**~~ ✅ 已完成：笔记上下文注入（Zustand noteContext + sendMessage body 动态注入）。
 6. ~~**任务 3.4（P1）**~~ ✅ 已完成：AI → 编辑器插入链路（Zustand 事件总线 + `insertBlock`）。
 7. ~~**任务 3.5（P1）**~~ ✅ 已完成：Generative UI 联动（AI 返回 TaskBoard JSON + TaskBoard 交互式状态切换）。
-8. **任务 3.6（P2）**：UI 打磨 + 部署到 Vercel。（部分完成：Markdown 渲染、加载动画、面板拖拽已交付）
+8. ~~**任务 3.6（P2）**~~ ✅ 已完成：UI 打磨（Markdown 渲染、加载动画、面板拖拽、错误处理均已交付）。
 9. **执行清单文档**：详见 `docs/Phase-3-Execution-Plan.md`。
 
 ## 5. 关键备注 (Context Memo)
 
-- **当前进展结论**：阶段三 P0（AI 核心链路）与 P1（AI → 编辑器插入 + Generative UI 联动）均已交付，AI ↔ 编辑器双向联动已形成完整闭环，包括结构化内容插入与交互式组件状态同步。下一步是 UI 打磨与部署（P2）。
-- **主要风险**：核心功能链路已打通，剩余风险在于部署兼容性与错误处理兜底。
-- **执行建议**：补充错误处理 UI，部署到 Vercel 验证 streaming 在 Edge/Node Runtime 下的兼容性。
+- **当前进展结论**：阶段三 P0（AI 核心链路）、P1（AI → 编辑器插入 + Generative UI 联动）与 P2（UI 打磨）均已交付。AI ↔ 编辑器双向联动已形成完整闭环，错误处理（toast 通知 + 内联错误 UI + 重试）已就绪。下一步是 Vercel 部署（任务 3.7）。
+- **主要风险**：核心功能链路与错误处理已打通，剩余风险在于 Vercel 部署兼容性（Edge Runtime streaming）。
+- **执行建议**：部署到 Vercel 验证 streaming 在 Edge Runtime 下的兼容性，配置环境变量，产出 live demo 链接。
 
 ## 6. 技术栈接入状态澄清
 
