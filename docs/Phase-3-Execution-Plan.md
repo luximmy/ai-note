@@ -85,11 +85,11 @@
 - AI 面板拖拽调整宽度 — ✅ 已完成（280px-800px，拖拽手柄）
 - Edge Runtime 声明 — ✅ 已完成（`/api/chat` 显式声明 `export const runtime = 'edge'`）
 
-### 任务 3.7：部署到 Vercel
+### ~~任务 3.7：部署到 Vercel~~ ✅ 已完成
 
-- 配置 Vercel 环境变量
-- 确保 streaming 在 Vercel Edge/Node Runtime 下正常工作
-- 产出 live demo 链接
+- 配置 Vercel 环境变量 — ✅ 已完成
+- 确保 streaming 在 Vercel Edge/Node Runtime 下正常工作 — ✅ 已完成
+- 产出 live demo 链接 — ✅ 已完成
 
 ## 依赖关系
 
@@ -97,7 +97,7 @@
 ✅ 3.1 (API Route) ──→ ✅ 3.2 (Chat UI) ──→ ✅ 3.3 (上下文注入)
                                             ──→ ✅ 3.4 (插入编辑器)
                                                  ──→ ✅ 3.5 (Generative UI 联动)
-✅ 3.2 ──→ ✅ 3.6 (UI 打磨) ──→ 3.7 (部署)
+✅ 3.2 ──→ ✅ 3.6 (UI 打磨) ──→ ✅ 3.7 (部署)
 ```
 
 ## 面试讲点预设
