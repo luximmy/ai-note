@@ -1,10 +1,10 @@
 # 阶段四执行清单：交互深化与知识网络
 
-> 更新时间：2026-05-13
+> 更新时间：2026-05-14
 > 目标：深化编辑器交互体验（拖拽排序、区块删除）与 AI 能力（局部重写），并引入知识网络（MOC + 图谱可视化），使项目达到面试可讲、Demo 可演的完整形态。
 > 完成状态的权威记录见 `docs/Current-Status.md`，本文档侧重执行计划、依赖关系与面试讲点。
 
-## P0：Block 删除 + 拖拽排序（任务 4.1）
+## ~~P0：Block 删除 + 拖拽排序（任务 4.1）~~ ✅ 已完成
 
 ### 目标
 
@@ -32,6 +32,13 @@
 
 - "为什么选 @dnd-kit？" — 无障碍优先、体积小、维护活跃、原生支持虚拟化列表
 - "拖拽如何应对网络失败？" — 与编辑保存相同的双缓冲 + 回滚架构，本地先动，服务端确认后推进快照
+
+### 交付物
+
+- `src/components/editor/SortableBlockItem.tsx`（新建）— 拖拽手柄 + 删除按钮的包裹组件
+- `src/components/editor/BlockRenderer.tsx`（修改）— DndContext + SortableContext 集成，handleDragEnd / handleDeleteBlock 乐观更新逻辑
+- `src/actions/note.ts`（修改）— 新增 `deleteBlockAction` + `reorderBlocksAction`
+- `package.json`（修改）— 新增 `@dnd-kit/core` + `@dnd-kit/sortable` + `@dnd-kit/utilities`
 
 ---
 
@@ -109,8 +116,8 @@
 ## 依赖关系
 
 ```
-✅ 3.7 (部署) ──→ 4.1 (拖拽 + 删除) ──→ 4.2 (局部重写)
-                                        ──→ 4.3 (MOC + 图谱)
+✅ 3.7 (部署) ──→ ✅ 4.1 (拖拽 + 删除) ──→ 4.2 (局部重写)
+                                         ──→ 4.3 (MOC + 图谱)
 ```
 
-4.2 与 4.3 相互独立，可并行推进。
+4.1 已完成，4.2 与 4.3 相互独立，可并行推进。

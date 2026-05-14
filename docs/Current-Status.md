@@ -3,9 +3,9 @@
 ## 1. 项目基本信息
 
 - **项目名称**：ai-note
-- **当前阶段**：阶段三全部完成；进入阶段四（拖拽排序 + AI 局部重写 + 知识网络）
-- **当前重心**：任务 4.1（Block 删除 + 拖拽排序）
-- **上次更新时间**：2026-05-13
+- **当前阶段**：阶段三全部完成；阶段四进行中（拖拽排序 ✅ + AI 局部重写 + 知识网络）
+- **当前重心**：任务 4.2（AI 局部重写）
+- **上次更新时间**：2026-05-14
 
 ## 2. 已完成里程碑 (Completed)
 
@@ -47,10 +47,10 @@
 - [x] **AI 错误处理完善**：`ChatPanel` 新增 `sonner` toast 错误通知 + 内联错误 UI（红色警告卡片 + "重新生成"按钮），API Route 返回结构化 JSON 错误响应。
 - [x] **Edge Runtime 声明**：`/api/chat` Route Handler 显式声明 `export const runtime = 'edge'`，优化流式输出性能。
 - [x] **Vercel 部署完成（任务 3.7）**：环境变量已配置，streaming 在 Edge Runtime 下正常工作，live demo 已上线。
+- [x] **Block 删除 + 拖拽排序完成（任务 4.1）**：`@dnd-kit` 集成，`SortableBlockItem` 包裹每个区块提供拖拽手柄与删除按钮；`DragOverlay` 悬浮层实现丝滑拖拽体验；`deleteBlockAction` + `reorderBlocksAction` 沿用双缓冲 + 回滚架构，拖拽/删除均支持乐观更新与失败恢复。
 
 ## 3. 进行中的任务 (In Progress)
 
-- [ ] **任务 4.1（P0）**：Block 删除 + 拖拽排序（`@dnd-kit` + `deleteBlockAction` + `reorderBlocksAction`）
 - [ ] **任务 4.2（P1）**：AI 局部重写（选中文字 → AI 流式原位改写）
 - [ ] **任务 4.3（P2）**：知识网络（`[[wikilink]]` 双向链接 + 力导向图谱可视化）
 
@@ -69,8 +69,8 @@
 
 ## 5. 关键备注 (Context Memo)
 
-- **当前进展结论**：阶段三全部完成。AI ↔ 编辑器双向联动完整闭环，错误处理就绪，Vercel 部署成功。项目已具备可演示的完整形态。
-- **下一步方向**：阶段四聚焦三个高价值功能——拖拽排序（P0）、AI 局部重写（P1）、知识网络 MOC（P2）。详见 `docs/Phase-4-Execution-Plan.md`。
+- **当前进展结论**：阶段三全部完成，阶段四 P0（Block 删除 + 拖拽排序）已交付。编辑器交互体验大幅提升，拖拽重排与区块删除均支持乐观更新与失败回滚。
+- **下一步方向**：阶段四剩余两个功能——AI 局部重写（P1）、知识网络 MOC（P2）。详见 `docs/Phase-4-Execution-Plan.md`。
 
 ## 6. 技术栈接入状态澄清
 

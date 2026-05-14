@@ -100,3 +100,46 @@ export async function addBlockAction(
     timestamp: Date.now(),
   };
 }
+
+/**
+ * 模拟删除区块
+ */
+export async function deleteBlockAction(noteId: string, blockId: string) {
+  // 保持和 update 一致的 500ms 延迟与 15% 失败率
+  await simulateNetwork(500, 0.15);
+
+  const note = mockDocuments.find((doc) => doc.id === noteId);
+  if (note) {
+    note.blocks = note.blocks.filter((b) => b.id !== blockId);
+  }
+
+  if (process.env.NODE_ENV !== 'production') {
+    console.log(`[Mock Server] 成功从笔记 ${noteId} 中删除区块 ${blockId}`);
+  }
+  return { success: true, timestamp: Date.now() };
+}
+
+/**
+ * 模拟重排区块
+ */
+export async function reorderBlocksAction(noteId: string, blockIds: string[]) {
+  await simulateNetwork(500, 0.15);
+
+  const note = mockDocuments.find((doc) => doc.id === noteId);
+  if (note) {
+    // 根据传入的 ID 顺序，重新排列后端的 blocks 数组
+    const newBlocks: Block[] = [];
+    const blockMap = new Map(note.blocks.map((b) => [b.id, b]));
+
+    for (const id of blockIds) {
+      const block = blockMap.get(id);
+      if (block) newBlocks.push(block);
+    }
+    note.blocks = newBlocks;
+  }
+
+  if (process.env.NODE_ENV !== 'production') {
+    console.log(`[Mock Server] 成功对笔记 ${noteId} 的区块进行重排`);
+  }
+  return { success: true, timestamp: Date.now() };
+}

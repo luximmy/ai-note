@@ -23,6 +23,30 @@ import { SlashMenuItem } from './SlashMenu';
 import { emitSaveEvent } from '@/lib/telemetry';
 import { useAppStore } from '@/store';
 
+// 引入拖拽依赖
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+  DragStartEvent,
+  DragOverlay,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+
+import { GripVertical } from 'lucide-react';
+// 引入刚刚写的 Wrapper 和刚才写的 Action
+import { SortableBlockItem } from './SortableBlockItem';
+import { deleteBlockAction, reorderBlocksAction } from '@/actions/note';
+
 // 🚀 优化：定义统一的组件 Props 接口，供各个 Block 组件继承和校验
 export interface BlockComponentProps<T extends Block> {
   block: T;
@@ -62,6 +86,7 @@ export function BlockRenderer({
   const safeSnapshotRef = useRef<Block[]>(initialBlocks);
   const [forceSyncToken, setForceSyncToken] = useState(0);
   const [autoFocusBlockId, setAutoFocusBlockId] = useState<string | null>(null);
+  const [activeId, setActiveId] = useState<string | null>(null);
 
   const timersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   const pendingUpdatesRef = useRef<Record<string, Partial<Block>>>({});
@@ -257,7 +282,9 @@ export function BlockRenderer({
         content: item.content || '',
         // ✨ 核心修复：优先读取透传的 attributes，如果没有再回退到原有逻辑
         attributes:
-          ('attributes' in item ? (item as { attributes?: Record<string, unknown> }).attributes : undefined) ||
+          ('attributes' in item
+            ? (item as { attributes?: Record<string, unknown> }).attributes
+            : undefined) ||
           (item.level
             ? { level: item.level }
             : item.type === 'generative_ui'
@@ -336,7 +363,8 @@ export function BlockRenderer({
       setSafeSnapshot((prev) => [...prev, ...newBlocks]);
 
       // 静默触发网络请求，失败时回滚
-      const lastBlockId = blocksRef.current[blocksRef.current.length - 1]?.id || 'mock-id';
+      const lastBlockId =
+        blocksRef.current[blocksRef.current.length - 1]?.id || 'mock-id';
       const insertedIds = new Set(newBlocks.map((b) => b.id));
 
       Promise.allSettled(
@@ -354,33 +382,175 @@ export function BlockRenderer({
     }
   }, [pendingInsertBlocks, noteId, clearInsert]);
 
+  // 在 BlockRenderer 内部配置拖拽传感器
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 5, // 核心防御：移动 5px 才触发拖拽，保护富文本点击与选区
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
+  );
+
+  // --- 拖拽开始 ---
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveId(String(event.active.id));
+  };
+
+  // --- 拖拽结束处理 ---
+  const handleDragEnd = async (event: DragEndEvent) => {
+    setActiveId(null); // 👈 新增：拖拽结束时清空活动 ID
+
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      const oldIndex = blocks.findIndex((b) => b.id === active.id);
+      const newIndex = blocks.findIndex((b) => b.id === over.id);
+
+      // 1. 本地乐观重排
+      const newBlocks = arrayMove(blocks, oldIndex, newIndex);
+      setBlocks(newBlocks);
+      setSafeSnapshot(newBlocks); // 结构性改变，立刻推进快照
+
+      try {
+        // 2. 服务端同步
+        const result = await reorderBlocksAction(
+          noteId,
+          newBlocks.map((b) => b.id),
+        );
+        if (result.success) {
+          emitSaveEvent({
+            type: 'success',
+            noteId,
+            blockId: String(active.id),
+            seq: 0,
+            timestamp: Date.now(),
+          });
+        }
+      } catch (err) {
+        // 3. 失败回滚
+        toast.error('重排失败', {
+          description: '网络同步异常，已恢复原有顺序',
+        });
+        setBlocks(safeSnapshotRef.current);
+        setSafeSnapshot(safeSnapshotRef.current);
+        startTransition(() => {
+          router.refresh();
+        });
+      }
+    }
+  };
+
+  // 最好也加一个取消拖拽的处理
+  const handleDragCancel = () => {
+    setActiveId(null);
+  };
+
+  // --- 删除区块处理 ---
+  const handleDeleteBlock = async (blockId: string) => {
+    if (blocks.length <= 1) return; // 最后一个不能删
+
+    // 1. 本地乐观删除
+    const newBlocks = blocks.filter((b) => b.id !== blockId);
+    setBlocks(newBlocks);
+    setSafeSnapshot(newBlocks);
+
+    try {
+      // 2. 服务端同步
+      await deleteBlockAction(noteId, blockId);
+    } catch (err) {
+      // 3. 失败回滚
+      toast.error('删除失败', { description: '网络同步异常，已恢复区块' });
+      setBlocks(safeSnapshotRef.current);
+      setSafeSnapshot(safeSnapshotRef.current);
+      startTransition(() => {
+        router.refresh();
+      });
+    }
+  };
+
   if (!blocks || blocks.length === 0) {
     return <div className='text-zinc-400 italic p-4'>暂无内容</div>;
   }
 
+  // 找出当前正在被拖拽的 Block 数据
+  const activeBlock = activeId ? blocks.find((b) => b.id === activeId) : null;
+  let ActiveComponent = null;
+  if (activeBlock) {
+    ActiveComponent = BlockRegistry[activeBlock.type] as React.ElementType;
+  }
+
   return (
     <div className='space-y-4 pb-32'>
-      {blocks.map((block) => {
-        // 🚨 架构级类型豁免：
-        // 由于 TS 暂不支持动态联合类型分发（Correlated Record Types 缺陷），
-        // 编译器无法推断 block.type 与 block 实例的绝对绑定关系。
-        // 这里采用 `as React.ElementType` 进行降级处理，因为在上面的 BlockRegistry
-        // 定义中我们已经保证了类型映射的绝对正确性。
-        const TargetComponent = BlockRegistry[block.type] as React.ElementType;
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragStart={handleDragStart} // 👈 绑定事件
+        onDragEnd={handleDragEnd}
+        onDragCancel={handleDragCancel} // 👈 绑定事件
+      >
+        <SortableContext
+          items={blocks.map((b) => b.id)}
+          strategy={verticalListSortingStrategy}
+        >
+          {blocks.map((block) => {
+            const TargetComponent = BlockRegistry[
+              block.type
+            ] as React.ElementType;
+            if (!TargetComponent) return null;
 
-        if (!TargetComponent) return null;
+            return (
+              <SortableBlockItem
+                key={block.id}
+                id={block.id}
+                onDelete={handleDeleteBlock}
+                isOnlyBlock={blocks.length === 1}
+              >
+                <TargetComponent
+                  block={block}
+                  onUpdate={updateBlockData}
+                  onInsert={insertBlock}
+                  forceSyncToken={forceSyncToken}
+                  autoFocus={autoFocusBlockId === block.id}
+                />
+              </SortableBlockItem>
+            );
+          })}
+        </SortableContext>
 
-        return (
-          <TargetComponent
-            key={block.id}
-            block={block}
-            onUpdate={updateBlockData}
-            onInsert={insertBlock}
-            forceSyncToken={forceSyncToken}
-            autoFocus={autoFocusBlockId === block.id}
-          />
-        );
-      })}
+        {/* 拖拽悬浮层优化 */}
+        <DragOverlay
+          dropAnimation={{
+            duration: 250,
+            easing: 'cubic-bezier(0.18, 0.67, 0.6, 1.22)', // 丝滑的弹簧回弹曲线
+          }}
+        >
+          {activeBlock && ActiveComponent ? (
+            <div className='w-full flex items-start gap-2 py-1 cursor-grabbing scale-[1.02] transition-transform rounded-xl shadow-[0_20px_40px_-15px_rgba(0,0,0,0.15)] bg-white/70 backdrop-blur-md ring-1 ring-zinc-200/50'>
+              {/* 1. 模拟左侧手柄的严格占位，彻底解决水平跳动问题 */}
+              <div className='mt-1.5 w-4 shrink-0 pl-1'>
+                <GripVertical className='h-4 w-4 text-zinc-400 opacity-50' />
+              </div>
+
+              {/* 2. 真实的 Block 内容 */}
+              <div className='flex-1 min-w-0 opacity-100 pointer-events-none'>
+                <ActiveComponent
+                  block={activeBlock}
+                  onUpdate={() => {}}
+                  onInsert={() => {}}
+                  forceSyncToken={forceSyncToken}
+                />
+              </div>
+
+              {/* 3. 模拟右侧删除按钮占位，保持右侧不贴边 */}
+              {blocks.length > 1 && (
+                <div className='mt-1.5 w-4 shrink-0 mr-2' />
+              )}
+            </div>
+          ) : null}
+        </DragOverlay>
+      </DndContext>
     </div>
   );
 }
