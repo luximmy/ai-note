@@ -1,3 +1,41 @@
+# 2026-05-15 工作日志
+
+## 完成任务
+
+### 任务 4.2：AI 局部重写 ✅
+
+**目标**：在编辑器中实现选中文字 → 浮现工具栏 → AI 流式原位改写，复用现有 Tiptap + streaming 基础设施。
+
+**实现内容**：
+
+1. **`/api/rewrite` Route Handler（新建）**
+   - Edge Runtime + `streamText` 调用 DeepSeek API
+   - 接收 `{ text, instruction, context }` 参数
+   - system prompt 约束 AI 只输出改写文本，不附带解释、不包裹代码块
+   - `temperature: 0.3` 保证改写稳定性
+
+2. **`RewriteToolbar` 浮动工具栏（新建）**
+   - `createPortal` 挂载至 `document.body`，定位在选区正上方
+   - 四个快捷指令：智能润色、扩写段落、精简提炼、翻译为英文
+   - 自定义指令输入框，支持回车提交
+   - `onMouseDown` 阻止冒泡，防止点击菜单时 Tiptap 丢失选区
+
+3. **`RichTextEditor` 选区检测与流式替换（修改）**
+   - 新增 `rewriteMenuState` 管理工具栏的开/关、坐标、选中文本及位置
+   - `editor.on('selectionUpdate')` 监听选区变化：有选区时提取纯文本 + 计算屏幕坐标 → 打开工具栏；无选区时关闭
+   - `handleRewrite`：关闭菜单 → `deleteRange` 删除原文 → `fetch('/api/rewrite')` 发起流式请求 → 逐 chunk `insertContent` 打字机式插入 → 完成后触发保存同步 + toast；失败时 toast 提示用户 Ctrl+Z 撤销
+
+4. **Zustand Store 扩展（修改）**
+   - 新增 `RewriteTarget` 类型与 `rewriteTarget` 状态字段
+   - 新增 `setRewriteTarget` 方法，预留跨组件协调改写目标的能力
+
+**技术决策**：
+- 流式原位替换策略：先删除原文再逐 token 插入，利用 Tiptap 的 transaction API 保证原子性
+- 改写 API 独立于 `/api/chat`：system prompt、temperature、错误语义均与对话不同，隔离更清晰
+- 工具栏用 `createPortal` 渲染，避免被编辑器的 `overflow: hidden` 裁剪
+
+---
+
 # 2026-05-14 工作日志
 
 ## 完成任务

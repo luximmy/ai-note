@@ -8,20 +8,32 @@ export interface PendingInsert {
   attributes?: Record<string, unknown>;
 }
 
+// ✨ 新增：定义重写目标的类型
+export interface RewriteTarget {
+  blockId: string;
+  text: string;
+  from: number; // 选区开始位置
+  to: number; // 选区结束位置
+}
+
 interface AppState {
   isSidebarOpen: boolean;
   isAgentPanelOpen: boolean;
   noteContext: string;
-  // ✨ 新增：等待插入的区块指令
   pendingInsertBlocks: PendingInsert[] | null;
+
+  // ✨ 新增：重写目标状态
+  rewriteTarget: RewriteTarget | null;
 
   toggleSidebar: () => void;
   toggleAgentPanel: () => void;
   setAgentPanelOpen: (isOpen: boolean) => void;
   setNoteContext: (context: string) => void;
-  // ✨ 新增：派发插入指令
-  triggerInsert: (blocks: PendingInsert[]) => void; // ✨ 接收数组
+  triggerInsert: (blocks: PendingInsert[]) => void;
   clearInsert: () => void;
+
+  // ✨ 新增：设置和清除重写目标的方法
+  setRewriteTarget: (target: RewriteTarget | null) => void;
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -30,6 +42,9 @@ export const useAppStore = create<AppState>((set) => ({
   noteContext: '',
   pendingInsertBlocks: null,
 
+  // ✨ 初始化状态
+  rewriteTarget: null,
+
   toggleSidebar: () =>
     set((state) => ({ isSidebarOpen: !state.isSidebarOpen })),
   toggleAgentPanel: () =>
@@ -37,7 +52,9 @@ export const useAppStore = create<AppState>((set) => ({
   setAgentPanelOpen: (isOpen) => set({ isAgentPanelOpen: isOpen }),
   setNoteContext: (context) => set({ noteContext: context }),
 
-  // ✨ 实现：设置插入指令
   triggerInsert: (blocks) => set({ pendingInsertBlocks: blocks }),
   clearInsert: () => set({ pendingInsertBlocks: null }),
+
+  // ✨ 实现方法
+  setRewriteTarget: (target) => set({ rewriteTarget: target }),
 }));

@@ -6,6 +6,9 @@ import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
 import { useEffect, useRef, useState } from 'react';
 import { SlashMenu, SlashMenuItem } from './SlashMenu';
+import { RewriteToolbar } from './RewriteToolbar';
+import { useAppStore } from '@/store';
+import { toast } from 'sonner';
 
 interface RichTextEditorProps {
   initialContent: string;
@@ -34,6 +37,15 @@ export function RichTextEditor({
     position: null,
   });
 
+  // 2. Rewrite Menu 状态
+  const [rewriteMenuState, setRewriteMenuState] = useState<{
+    isOpen: boolean;
+    position: { x: number; y: number } | null;
+    text: string;
+    from: number;
+    to: number;
+  }>({ isOpen: false, position: null, text: '', from: 0, to: 0 });
+
   // 使用 ref 同步 isOpen 状态，供 DOM 拦截器内部同步读取
   const isSlashMenuOpenRef = useRef(false);
 
@@ -59,6 +71,30 @@ export function RichTextEditor({
           'is-editor-empty before:content-[attr(data-placeholder)] before:text-zinc-400 before:absolute before:pointer-events-none',
       }),
     ],
+    onSelectionUpdate: ({ editor }) => {
+      const { empty, from, to } = editor.state.selection;
+
+      // 如果没有选中文本，或者选中的是空，关闭菜单
+      if (empty || from === to) {
+        setRewriteMenuState((prev) => ({ ...prev, isOpen: false }));
+        return;
+      }
+
+      // 获取选中的纯文本
+      const selectedText = editor.state.doc.textBetween(from, to);
+
+      // 获取当前选区的屏幕坐标（取选区起始位置）
+      const { view } = editor;
+      const coords = view.coordsAtPos(from);
+
+      setRewriteMenuState({
+        isOpen: true,
+        position: { x: coords.left, y: coords.top },
+        text: selectedText,
+        from,
+        to,
+      });
+    },
     content: initialContent,
     editorProps: {
       attributes: {
@@ -153,6 +189,54 @@ export function RichTextEditor({
     }
   };
 
+  const handleRewrite = async (instruction: string) => {
+    if (!editor) return;
+    const { text, from, to } = rewriteMenuState;
+
+    // 立即关闭菜单
+    setRewriteMenuState((prev) => ({ ...prev, isOpen: false }));
+
+    // 1. 删除原有的选中文本，为 AI 的流式输出腾出位置
+    editor.chain().focus().deleteRange({ from, to }).run();
+
+    try {
+      // 2. 发起 Fetch 请求到我们写好的 Edge API
+      const response = await fetch('/api/rewrite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text,
+          instruction,
+          context: useAppStore.getState().noteContext,
+        }),
+      });
+
+      if (!response.ok) throw new Error('Rewrite API Failed');
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+      if (!reader) return;
+
+      // 3. 开始流式读取并打字机式插入
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value, { stream: true });
+        // Tiptap 会自动在当前光标位置依次插入解析出的文本
+        editor.commands.insertContent(chunk);
+      }
+
+      // 4. 全部接收完毕后，显式触发一次保存同步
+      onUpdateRef.current(editor.getText());
+      toast.success('改写完成 ✨');
+    } catch (err) {
+      console.error(err);
+      toast.error('AI 改写失败', {
+        description: '网络请求异常，您可以通过 Ctrl+Z 撤销以恢复原文。',
+      });
+    }
+  };
+
   return (
     <>
       <EditorContent editor={editor} />
@@ -161,6 +245,14 @@ export function RichTextEditor({
         position={slashMenuState.position}
         onClose={() => setSlashMenuState({ isOpen: false, position: null })}
         onSelect={handleSlashSelect}
+      />
+      <RewriteToolbar
+        isOpen={rewriteMenuState.isOpen}
+        position={rewriteMenuState.position}
+        onRewrite={handleRewrite}
+        onClose={() =>
+          setRewriteMenuState((prev) => ({ ...prev, isOpen: false }))
+        }
       />
     </>
   );
