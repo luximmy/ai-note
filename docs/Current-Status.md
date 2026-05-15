@@ -48,7 +48,7 @@
 - [x] **Edge Runtime 声明**：`/api/chat` Route Handler 显式声明 `export const runtime = 'edge'`，优化流式输出性能。
 - [x] **Vercel 部署完成（任务 3.7）**：环境变量已配置，streaming 在 Edge Runtime 下正常工作，live demo 已上线。
 - [x] **Block 删除 + 拖拽排序完成（任务 4.1）**：`@dnd-kit` 集成，`SortableBlockItem` 包裹每个区块提供拖拽手柄与删除按钮；`DragOverlay` 悬浮层实现丝滑拖拽体验；`deleteBlockAction` + `reorderBlocksAction` 沿用双缓冲 + 回滚架构，拖拽/删除均支持乐观更新与失败恢复。
-- [x] **AI 局部重写完成（任务 4.2）**：选中文字后浮现浮动工具栏（智能润色/扩写/精简/翻译/自定义指令），`/api/rewrite` Edge API 调用 DeepSeek 流式返回改写结果，`RichTextEditor` 逐 token 原位替换，完成触发保存同步 + toast 反馈，失败支持 Ctrl+Z 撤销恢复。
+- [x] **AI 局部重写完成（任务 4.2）**：选中文字后浮现浮动工具栏（智能润色/扩写/精简/翻译/自定义指令），`/api/rewrite` Edge API 调用 DeepSeek 流式返回改写结果，`RichTextEditor` 逐 token 原位替换（300ms 选区防抖 + 延迟删除避免空白闪烁 + loading 态过渡），完成触发保存同步 + toast 反馈，失败支持 Ctrl+Z 撤销恢复。
 
 ## 3. 进行中的任务 (In Progress)
 

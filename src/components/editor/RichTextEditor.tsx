@@ -28,6 +28,9 @@ export function RichTextEditor({
   const isComposingRef = useRef(false);
   const onUpdateRef = useRef(onUpdate);
 
+  // 新增：用于防抖的定时器
+  const selectionTimerRef = useRef<NodeJS.Timeout | null>(null);
+
   // 1. Slash Menu 状态
   const [slashMenuState, setSlashMenuState] = useState<{
     isOpen: boolean;
@@ -71,29 +74,37 @@ export function RichTextEditor({
           'is-editor-empty before:content-[attr(data-placeholder)] before:text-zinc-400 before:absolute before:pointer-events-none',
       }),
     ],
+    // 💥 修复 1：防抖处理选区更新
     onSelectionUpdate: ({ editor }) => {
-      const { empty, from, to } = editor.state.selection;
+      // a. 只要选区发生变化，立刻隐藏菜单，防止拖拽时闪烁
+      setRewriteMenuState((prev) =>
+        prev.isOpen ? { ...prev, isOpen: false } : prev,
+      );
 
-      // 如果没有选中文本，或者选中的是空，关闭菜单
-      if (empty || from === to) {
-        setRewriteMenuState((prev) => ({ ...prev, isOpen: false }));
-        return;
+      // b. 清除上一次的定时器
+      if (selectionTimerRef.current) {
+        clearTimeout(selectionTimerRef.current);
       }
 
-      // 获取选中的纯文本
-      const selectedText = editor.state.doc.textBetween(from, to);
+      // c. 开启 300ms 的防抖等待
+      selectionTimerRef.current = setTimeout(() => {
+        const { empty, from, to } = editor.state.selection;
 
-      // 获取当前选区的屏幕坐标（取选区起始位置）
-      const { view } = editor;
-      const coords = view.coordsAtPos(from);
+        // 如果没有选中文本，直接返回
+        if (empty || from === to) return;
 
-      setRewriteMenuState({
-        isOpen: true,
-        position: { x: coords.left, y: coords.top },
-        text: selectedText,
-        from,
-        to,
-      });
+        const selectedText = editor.state.doc.textBetween(from, to);
+        const { view } = editor;
+        const coords = view.coordsAtPos(from);
+
+        setRewriteMenuState({
+          isOpen: true,
+          position: { x: coords.left, y: coords.top },
+          text: selectedText,
+          from,
+          to,
+        });
+      }, 300); // 300ms 是一个非常舒适的停留唤出时间
     },
     content: initialContent,
     editorProps: {
@@ -189,6 +200,7 @@ export function RichTextEditor({
     }
   };
 
+  // 💥 修复 2：延迟删除与 Loading 态过渡
   const handleRewrite = async (instruction: string) => {
     if (!editor) return;
     const { text, from, to } = rewriteMenuState;
@@ -196,11 +208,10 @@ export function RichTextEditor({
     // 立即关闭菜单
     setRewriteMenuState((prev) => ({ ...prev, isOpen: false }));
 
-    // 1. 删除原有的选中文本，为 AI 的流式输出腾出位置
-    editor.chain().focus().deleteRange({ from, to }).run();
+    // ✨ 弹出全局 Loading 提示，安抚用户等待情绪
+    const toastId = toast.loading('✨ AI 正在思考，请稍候...');
 
     try {
-      // 2. 发起 Fetch 请求到我们写好的 Edge API
       const response = await fetch('/api/rewrite', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -216,24 +227,31 @@ export function RichTextEditor({
       const decoder = new TextDecoder();
       if (!reader) return;
 
-      // 3. 开始流式读取并打字机式插入
+      let isFirstChunk = true;
+
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
 
         const chunk = decoder.decode(value, { stream: true });
-        // Tiptap 会自动在当前光标位置依次插入解析出的文本
+        if (!chunk) continue;
+
+        // ✨ 核心逻辑：只有收到真正的第一波数据时，才删除旧文字
+        if (isFirstChunk) {
+          editor.chain().focus().deleteRange({ from, to }).run();
+          toast.dismiss(toastId); // 关掉 Loading 提示
+          isFirstChunk = false;
+        }
+
         editor.commands.insertContent(chunk);
       }
 
-      // 4. 全部接收完毕后，显式触发一次保存同步
       onUpdateRef.current(editor.getText());
       toast.success('改写完成 ✨');
     } catch (err) {
       console.error(err);
-      toast.error('AI 改写失败', {
-        description: '网络请求异常，您可以通过 Ctrl+Z 撤销以恢复原文。',
-      });
+      toast.dismiss(toastId);
+      toast.error('AI 改写失败', { description: '网络请求异常，请重试。' });
     }
   };
 
