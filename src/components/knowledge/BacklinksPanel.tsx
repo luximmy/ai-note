@@ -20,11 +20,12 @@ export function BacklinksPanel({ noteId }: BacklinksPanelProps) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setLoading(true);
+    let cancelled = false;
     getBacklinksForNote(noteId)
-      .then(setBacklinks)
-      .catch(() => setBacklinks([]))
-      .finally(() => setLoading(false));
+      .then((links) => { if (!cancelled) setBacklinks(links); })
+      .catch(() => { if (!cancelled) setBacklinks([]); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
   }, [noteId]);
 
   if (loading) {

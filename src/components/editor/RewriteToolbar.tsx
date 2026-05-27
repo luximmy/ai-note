@@ -16,7 +16,6 @@ export function RewriteToolbar({
   isOpen,
   position,
   onRewrite,
-  onClose,
 }: RewriteToolbarProps) {
   const [customInput, setCustomInput] = useState('');
 

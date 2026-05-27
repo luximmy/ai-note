@@ -33,9 +33,15 @@ export function RichTextEditor({
   const onUpdateRef = useRef(onUpdate);
   const router = useRouter();
   const routerRef = useRef(router);
-  routerRef.current = router;
   const documentsRef = useRef(documents);
-  documentsRef.current = documents;
+
+  useEffect(() => {
+    routerRef.current = router;
+  }, [router]);
+
+  useEffect(() => {
+    documentsRef.current = documents;
+  }, [documents]);
 
   // 新增：用于防抖的定时器
   const selectionTimerRef = useRef<NodeJS.Timeout | null>(null);

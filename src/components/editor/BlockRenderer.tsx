@@ -430,7 +430,7 @@ export function BlockRenderer({
             timestamp: Date.now(),
           });
         }
-      } catch (err) {
+      } catch {
         // 3. 失败回滚
         toast.error('重排失败', {
           description: '网络同步异常，已恢复原有顺序',
@@ -461,7 +461,7 @@ export function BlockRenderer({
     try {
       // 2. 服务端同步
       await deleteBlockAction(noteId, blockId);
-    } catch (err) {
+    } catch {
       // 3. 失败回滚
       toast.error('删除失败', { description: '网络同步异常，已恢复区块' });
       setBlocks(safeSnapshotRef.current);
