@@ -22,6 +22,7 @@ import { GenerativeUIBlock } from './blocks/GenerativeUIBlock';
 import { SlashMenuItem } from './SlashMenu';
 import { emitSaveEvent } from '@/lib/telemetry';
 import { useAppStore } from '@/store';
+import { mockDocuments } from '@/mock/data';
 
 // 引入拖拽依赖
 import {
@@ -54,6 +55,7 @@ export interface BlockComponentProps<T extends Block> {
   onInsert?: (afterBlockId: string, item: SlashMenuItem) => void;
   forceSyncToken?: number;
   autoFocus?: boolean;
+  documents?: { id: string; title: string }[];
 }
 
 // 🚀 收敛类型：使用映射类型精确校验每个区块的渲染器，彻底删除这里的 `as any`
@@ -513,6 +515,7 @@ export function BlockRenderer({
                   onInsert={insertBlock}
                   forceSyncToken={forceSyncToken}
                   autoFocus={autoFocusBlockId === block.id}
+                  documents={mockDocuments}
                 />
               </SortableBlockItem>
             );

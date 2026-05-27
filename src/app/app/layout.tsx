@@ -7,11 +7,13 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { mockDocuments } from '@/mock/data';
 import { ChatPanel } from '@/components/ai/ChatPanel';
+import { Network } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { isSidebarOpen, isAgentPanelOpen } = useAppStore();
   const pathname = usePathname();
+  const isGraphPage = pathname === '/app/graph';
 
   // ✨ 新增：用于管理 AI 面板的动态宽度
   const [agentPanelWidth, setAgentPanelWidth] = useState(320);
@@ -53,6 +55,21 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <ScrollArea className='flex-1 px-3'>
             <div className='space-y-1'>
               <div className='text-xs font-medium text-zinc-500 py-2 px-2'>
+                导航
+              </div>
+              <Link
+                href='/app/graph'
+                className={`flex items-center gap-2 px-2 py-1.5 text-sm rounded-md transition-colors ${
+                  pathname === '/app/graph'
+                    ? 'bg-zinc-200/80 font-medium text-zinc-900'
+                    : 'hover:bg-zinc-200/50 text-zinc-600'
+                }`}
+              >
+                <Network className='h-4 w-4' />
+                知识图谱
+              </Link>
+
+              <div className='text-xs font-medium text-zinc-500 py-2 px-2 pt-4'>
                 最近笔记
               </div>
               {mockDocuments.map((doc) => {
@@ -81,7 +98,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       {/* 2. 中间主工作区 */}
       <main className='flex-1 h-full flex flex-col relative overflow-hidden bg-white'>
         <ScrollArea className='h-full'>
-          <div className='max-w-3xl mx-auto py-12 px-8'>{children}</div>
+          <div
+            className={
+              isGraphPage
+                ? 'h-full p-8'
+                : 'max-w-3xl mx-auto py-12 px-8'
+            }
+          >
+            {children}
+          </div>
         </ScrollArea>
       </main>
 

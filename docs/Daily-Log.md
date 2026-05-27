@@ -1,3 +1,53 @@
+# 2026-05-27 工作日志
+
+## 完成任务
+
+### 任务 4.3：知识网络 ✅
+
+**目标**：实现 `[[wikilink]]` 双向链接 + 力导向图谱可视化 + 反向链接面板。
+
+**实现内容**：
+
+1. **`src/lib/wikilink-parser.ts`（新建）**
+   - `parseWikilinks(content)` — 正则 `/\[\[([^\]]+)\]\]/g` 提取 wikilink 目标标题
+   - `resolveWikilinkTitle(title, documents)` — 按标题精确匹配解析为文档 ID
+   - `extractContext(content, matchIndex, matchLength)` — 提取 wikilink 周围 ±40 字符的上下文预览
+
+2. **`src/components/editor/extensions/wikilink-decoration.ts`（新建）**
+   - ProseMirror Plugin，维护 `DecorationSet` 实时高亮 `[[...]]` 语法
+   - 点击跳转：通过 `caretRangeFromPoint` + TreeWalker 精确检测点击字符偏移，验证是否落在 `[[...]]` 范围内，避免 ProseMirror `posAtCoords` 的坐标偏移问题
+
+3. **`src/components/knowledge/GraphView.tsx`（新建）**
+   - `d3-force` 力导向图谱（`forceLink` + `forceManyBody` + `forceCollide`）
+   - Canvas 渲染：节点大小按反向链接数加权，标签显示 emoji + 截断标题
+   - 交互：滚轮缩放、拖拽平移、点击节点跳转笔记页
+   - Auto-fit：simulation 结束后一次性计算包围盒并调整 viewport，避免抽动
+
+4. **`src/components/knowledge/BacklinksPanel.tsx`（新建）**
+   - 展示当前笔记的所有反向链接（来源笔记 + 上下文预览）
+   - Skeleton loading 状态，无引用时返回 null
+
+5. **`src/app/app/graph/page.tsx`（新建）**
+   - 全屏图谱页面，调用 `getGraphData()` server action 获取节点和边数据
+
+6. **`src/actions/note.ts`（修改）**
+   - 新增 `getGraphData()` — 扫描所有文档的 wikilink，构建 `{ nodes, edges }` 图数据
+   - 新增 `getBacklinksForNote(noteId)` — 查询指定笔记的所有反向引用
+
+7. **`src/app/app/layout.tsx`（修改）**
+   - 侧边栏新增图谱入口（`/app/graph`）
+
+8. **`src/mock/data.ts`（修改）**
+   - 补充 5 篇文档间的 `[[wikilink]]` 交叉引用样例
+
+**技术决策**：
+- ProseMirror 插件而非 Tiptap Node Extension：wikilink 是装饰性语法，不改变文档结构，`Decoration.inline` 更轻量
+- Canvas 而非 SVG 渲染图谱：节点数可扩展，性能更好
+- `caretRangeFromPoint` + TreeWalker 检测点击：绕过 ProseMirror `posAtCoords` 在 inline decoration 下的坐标偏移问题
+- Auto-fit 在 simulation `end` 事件中执行一次：避免在 tick 过程中持续调整 viewport 导致抽动
+
+---
+
 # 2026-05-15 工作日志
 
 ## 优化与修复

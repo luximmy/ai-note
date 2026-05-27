@@ -8,7 +8,18 @@ export const mockDocuments: Document[] = [
     emoji: '🧠',
     tags: ['architecture', 'ai', 'nextjs'],
     lastAccessedAt: Date.now(),
-    backlinks: [],
+    backlinks: [
+      {
+        noteId: 'doc_004',
+        noteTitle: '编辑器容灾演练记录',
+        contextPreview: '...也需要参考 [[AI Agent 前端架构思考]] 中的乐观更新策略。',
+      },
+      {
+        noteId: 'doc_005',
+        noteTitle: 'AI 笔记产品迭代待办',
+        contextPreview: '...需要按 block 级别给 citation，参考 [[AI Agent 前端架构思考]]。',
+      },
+    ],
     blocks: [
       {
         id: 'blk_1',
@@ -20,7 +31,7 @@ export const mockDocuments: Document[] = [
         id: 'blk_2',
         type: 'paragraph',
         content:
-          '在开发 AI-Native 画布时，最大的难点在于如何将大模型的流式文本转换为结构化的 React 组件。这需要极强的数据状态管理能力。',
+          '在开发 AI-Native 画布时，最大的难点在于如何将大模型的流式文本转换为结构化的 React 组件。这与 [[React 19 状态模型速记]] 中的 useOptimistic 方案密切相关，也需要参考 [[Next.js App Router 排坑清单]] 的边界处理经验。',
       },
       {
         id: 'blk_3',
@@ -71,7 +82,12 @@ export const mockDocuments: Document[] = [
       {
         noteId: 'doc_001',
         noteTitle: 'AI Agent 前端架构思考',
-        contextPreview: '提到 useOptimistic 在编辑器场景的边界。',
+        contextPreview: '...与 [[React 19 状态模型速记]] 中的 useOptimistic 方案密切相关...',
+      },
+      {
+        noteId: 'doc_005',
+        noteTitle: 'AI 笔记产品迭代待办',
+        contextPreview: '...后续接入 RAG 后参考 [[React 19 状态模型速记]] 的状态模型。',
       },
     ],
     blocks: [
@@ -85,7 +101,7 @@ export const mockDocuments: Document[] = [
         id: 'blk_2_2',
         type: 'paragraph',
         content:
-          '离散原子操作（点赞、勾选、单次提交）优先 useOptimistic；连续编辑输入优先双缓冲状态。',
+          '离散原子操作（点赞、勾选、单次提交）优先 useOptimistic；连续编辑输入优先双缓冲状态。更多容灾细节见 [[编辑器容灾演练记录]]。',
       },
       {
         id: 'blk_2_3',
@@ -113,7 +129,13 @@ export const mockDocuments: Document[] = [
     emoji: '🧭',
     tags: ['nextjs', 'app-router', 'rsc'],
     lastAccessedAt: Date.now() - 1000 * 60 * 60 * 2,
-    backlinks: [],
+    backlinks: [
+      {
+        noteId: 'doc_001',
+        noteTitle: 'AI Agent 前端架构思考',
+        contextPreview: '...也需要参考 [[Next.js App Router 排坑清单]] 的边界处理经验。',
+      },
+    ],
     blocks: [
       {
         id: 'blk_3_1',
@@ -149,7 +171,7 @@ export const mockDocuments: Document[] = [
       {
         noteId: 'doc_002',
         noteTitle: 'React 19 状态模型速记',
-        contextPreview: '对比了双缓冲与 optimistic 方案的边界。',
+        contextPreview: '...更多容灾细节见 [[编辑器容灾演练记录]]。',
       },
     ],
     blocks: [
@@ -163,7 +185,7 @@ export const mockDocuments: Document[] = [
         id: 'blk_4_2',
         type: 'paragraph',
         content:
-          '本地先更新 active state；请求失败后回滚到 safe snapshot，并触发 refresh 对齐服务端真值。',
+          '本地先更新 active state；请求失败后回滚到 safe snapshot，并触发 refresh 对齐服务端真值。也需要参考 [[AI Agent 前端架构思考]] 中的乐观更新策略。',
       },
       {
         id: 'blk_4_3',
@@ -222,7 +244,7 @@ export const mockDocuments: Document[] = [
         id: 'blk_5_4',
         type: 'paragraph',
         content:
-          '后续接入 RAG 后，回答内容需要按 block 级别给 citation，支持点击定位到原文。',
+          '后续接入 RAG 后，回答内容需要按 block 级别给 citation，支持点击定位到原文。需要参考 [[React 19 状态模型速记]] 的状态模型和 [[AI Agent 前端架构思考]] 的架构设计。',
       },
     ],
   },

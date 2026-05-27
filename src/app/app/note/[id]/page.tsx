@@ -2,6 +2,7 @@
 import { getNoteById } from '@/actions/note';
 import { notFound } from 'next/navigation';
 import { BlockRenderer } from '@/components/editor/BlockRenderer'; // <-- 引入刚写的组件
+import { BacklinksPanel } from '@/components/knowledge/BacklinksPanel';
 import { Document } from '@/types';
 
 interface NotePageProps {
@@ -43,6 +44,8 @@ export default async function NotePage({ params }: NotePageProps) {
           noteId={id}
         />
       </section>
+
+      <BacklinksPanel noteId={id} />
     </article>
   );
 }

@@ -3,9 +3,9 @@
 ## 1. 项目基本信息
 
 - **项目名称**：ai-note
-- **当前阶段**：阶段三全部完成；阶段四进行中（拖拽排序 ✅ + AI 局部重写 ✅ + 知识网络）
-- **当前重心**：任务 4.3（知识网络）
-- **上次更新时间**：2026-05-15
+- **当前阶段**：阶段三全部完成；阶段四进行中（拖拽排序 ✅ + AI 局部重写 ✅ + 知识网络 ✅）
+- **当前重心**：阶段四收官
+- **上次更新时间**：2026-05-27
 
 ## 2. 已完成里程碑 (Completed)
 
@@ -49,10 +49,11 @@
 - [x] **Vercel 部署完成（任务 3.7）**：环境变量已配置，streaming 在 Edge Runtime 下正常工作，live demo 已上线。
 - [x] **Block 删除 + 拖拽排序完成（任务 4.1）**：`@dnd-kit` 集成，`SortableBlockItem` 包裹每个区块提供拖拽手柄与删除按钮；`DragOverlay` 悬浮层实现丝滑拖拽体验；`deleteBlockAction` + `reorderBlocksAction` 沿用双缓冲 + 回滚架构，拖拽/删除均支持乐观更新与失败恢复。
 - [x] **AI 局部重写完成（任务 4.2）**：选中文字后浮现浮动工具栏（智能润色/扩写/精简/翻译/自定义指令），`/api/rewrite` Edge API 调用 DeepSeek 流式返回改写结果，`RichTextEditor` 逐 token 原位替换（300ms 选区防抖 + 延迟删除避免空白闪烁 + loading 态过渡），完成触发保存同步 + toast 反馈，失败支持 Ctrl+Z 撤销恢复。
+- [x] **知识网络完成（任务 4.3）**：`[[wikilink]]` 双向链接语法（`wikilink-parser.ts` 解析 + `wikilink-decoration.ts` ProseMirror 插件实现高亮与点击跳转），`d3-force` 力导向图谱可视化（`GraphView.tsx` 支持缩放/平移/点击节点跳转），反向链接面板（`BacklinksPanel.tsx` 展示当前笔记的引用来源与上下文预览），图谱全屏页面（`app/graph/page.tsx`），侧边栏新增图谱入口。图谱 auto-fit 在 simulation 结束后一次性执行，避免抽动。
 
 ## 3. 进行中的任务 (In Progress)
 
-- [ ] **任务 4.3（P2）**：知识网络（`[[wikilink]]` 双向链接 + 力导向图谱可视化）
+- 阶段四全部功能已交付，待收尾
 
 ## 4. 下一阶段任务派发 (Next Steps)
 
@@ -65,12 +66,13 @@
 7. ~~**任务 3.5（P1）**~~ ✅ 已完成：Generative UI 联动（AI 返回 TaskBoard JSON + TaskBoard 交互式状态切换）。
 8. ~~**任务 3.6（P2）**~~ ✅ 已完成：UI 打磨（Markdown 渲染、加载动画、面板拖拽、错误处理均已交付）。
 9. ~~**任务 3.7（P2）**~~ ✅ 已完成：Vercel 部署，streaming 在 Edge Runtime 下正常工作。
-10. **执行清单文档**：详见 `docs/Phase-3-Execution-Plan.md`。
+10. ~~**任务 4.3（P2）**~~ ✅ 已完成：知识网络（wikilink 双向链接 + 力导向图谱 + 反向链接面板）。
+11. **执行清单文档**：详见 `docs/Phase-3-Execution-Plan.md`、`docs/Phase-4-Execution-Plan.md`。
 
 ## 5. 关键备注 (Context Memo)
 
-- **当前进展结论**：阶段三全部完成，阶段四 P0（Block 删除 + 拖拽排序）+ P1（AI 局部重写）已交付。编辑器已具备选中文字 → 浮现工具栏 → AI 流式原位改写的能力，复用 DeepSeek + Edge Runtime streaming 基础设施。
-- **下一步方向**：阶段四最后一个功能——知识网络 MOC（P2）。详见 `docs/Phase-4-Execution-Plan.md`。
+- **当前进展结论**：阶段三全部完成，阶段四全部功能已交付（P0 拖拽排序 + P1 AI 局部重写 + P2 知识网络）。编辑器已具备完整的 Block 编辑、AI 改写、`[[wikilink]]` 双向链接与图谱可视化能力。
+- **下一步方向**：阶段四收尾，可考虑 UI 打磨、测试补全、性能优化等。
 
 ## 6. 技术栈接入状态澄清
 

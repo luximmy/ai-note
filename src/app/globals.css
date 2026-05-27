@@ -128,3 +128,18 @@
     @apply font-sans;
     }
 }
+
+/* Wikilink decoration styles */
+.wikilink {
+  color: #6366f1;
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-underline-offset: 2px;
+  cursor: pointer;
+  transition: color 0.15s, text-decoration-color 0.15s;
+}
+
+.wikilink:hover {
+  color: #4f46e5;
+  text-decoration-style: solid;
+}

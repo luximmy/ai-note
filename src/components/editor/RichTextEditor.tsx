@@ -5,8 +5,10 @@ import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
 import { useEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { SlashMenu, SlashMenuItem } from './SlashMenu';
 import { RewriteToolbar } from './RewriteToolbar';
+import { registerWikilinkPlugin } from './extensions/wikilink-decoration';
 import { useAppStore } from '@/store';
 import { toast } from 'sonner';
 
@@ -16,6 +18,7 @@ interface RichTextEditorProps {
   onSlashCommand?: (item: SlashMenuItem) => void; // 新增：供外层接管插入逻辑
   forceSyncToken?: number;
   autoFocus?: boolean;
+  documents?: { id: string; title: string }[];
 }
 
 export function RichTextEditor({
@@ -24,9 +27,15 @@ export function RichTextEditor({
   onSlashCommand,
   forceSyncToken = 0,
   autoFocus = false,
+  documents = [],
 }: RichTextEditorProps) {
   const isComposingRef = useRef(false);
   const onUpdateRef = useRef(onUpdate);
+  const router = useRouter();
+  const routerRef = useRef(router);
+  routerRef.current = router;
+  const documentsRef = useRef(documents);
+  documentsRef.current = documents;
 
   // 新增：用于防抖的定时器
   const selectionTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -179,6 +188,20 @@ export function RichTextEditor({
       onUpdateRef.current(editor.getText());
     },
   });
+
+  // Register wikilink plugin after editor is mounted (avoids React reconciler race)
+  useEffect(() => {
+    if (!editor) return;
+    const timer = setTimeout(() => {
+      registerWikilinkPlugin(editor, {
+        documents: documentsRef.current,
+        onNavigate: (targetId: string) => {
+          routerRef.current.push(`/app/note/${targetId}`);
+        },
+      });
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [editor]);
 
   // 劫持外部数据刷新
   useEffect(() => {

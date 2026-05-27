@@ -110,3 +110,29 @@ export interface SearchResultFragment {
   content: string; // Block 的文本内容
   noteTitle: string; // 所属文档标题
 }
+
+// 7. 知识网络相关接口
+export interface Wikilink {
+  sourceId: string;
+  targetId: string; // 空字符串 = 幽灵链接（目标不存在）
+  targetTitle: string;
+  sourceTitle: string;
+  contextPreview: string;
+}
+
+export interface GraphNode {
+  id: string;
+  title: string;
+  emoji: string;
+  backlinkCount: number;
+}
+
+export interface GraphEdge {
+  source: string;
+  target: string;
+}
+
+export interface GraphData {
+  nodes: GraphNode[];
+  edges: GraphEdge[];
+}

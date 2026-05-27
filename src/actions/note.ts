@@ -2,7 +2,12 @@
 'use server';
 
 import { mockDocuments } from '@/mock/data';
-import { Document, Block } from '@/types';
+import { Document, Block, GraphData, GraphNode, Wikilink } from '@/types';
+import {
+  parseWikilinks,
+  resolveWikilinkTitle,
+  extractContext,
+} from '@/lib/wikilink-parser';
 
 /**
  * 模拟网络延迟的核心函数
@@ -142,4 +147,79 @@ export async function reorderBlocksAction(noteId: string, blockIds: string[]) {
     console.log(`[Mock Server] 成功对笔记 ${noteId} 的区块进行重排`);
   }
   return { success: true, timestamp: Date.now() };
+}
+
+/**
+ * 获取知识图谱数据（节点 + 边）
+ */
+export async function getGraphData(): Promise<GraphData> {
+  await simulateNetwork(600, 0.05);
+
+  const nodes: GraphNode[] = mockDocuments.map((doc) => ({
+    id: doc.id,
+    title: doc.title,
+    emoji: doc.emoji || '📄',
+    backlinkCount: 0,
+  }));
+
+  const backlinkCounts: Record<string, number> = {};
+  const edges: { source: string; target: string }[] = [];
+
+  for (const doc of mockDocuments) {
+    for (const block of doc.blocks) {
+      if (!block.content) continue;
+      const titles = parseWikilinks(block.content);
+      for (const title of titles) {
+        const targetId = resolveWikilinkTitle(title, mockDocuments);
+        if (targetId) {
+          edges.push({ source: doc.id, target: targetId });
+          backlinkCounts[targetId] = (backlinkCounts[targetId] || 0) + 1;
+        }
+      }
+    }
+  }
+
+  for (const node of nodes) {
+    node.backlinkCount = backlinkCounts[node.id] || 0;
+  }
+
+  return { nodes, edges };
+}
+
+/**
+ * 获取指定笔记的所有反向链接
+ */
+export async function getBacklinksForNote(noteId: string): Promise<Wikilink[]> {
+  await simulateNetwork(400, 0.05);
+
+  const targetDoc = mockDocuments.find((d) => d.id === noteId);
+  if (!targetDoc) return [];
+
+  const backlinks: Wikilink[] = [];
+
+  for (const doc of mockDocuments) {
+    if (doc.id === noteId) continue;
+    for (const block of doc.blocks) {
+      if (!block.content) continue;
+      const regex = /\[\[([^\]]+)\]\]/g;
+      let match: RegExpExecArray | null;
+      while ((match = regex.exec(block.content)) !== null) {
+        if (match[1].trim() === targetDoc.title) {
+          backlinks.push({
+            sourceId: doc.id,
+            targetId: noteId,
+            targetTitle: targetDoc.title,
+            sourceTitle: doc.title,
+            contextPreview: extractContext(
+              block.content,
+              match.index,
+              match[0].length,
+            ),
+          });
+        }
+      }
+    }
+  }
+
+  return backlinks;
 }
