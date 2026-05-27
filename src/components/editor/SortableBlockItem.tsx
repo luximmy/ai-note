@@ -2,7 +2,7 @@
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { GripVertical, Trash2 } from 'lucide-react';
-import { ReactNode } from 'react';
+import { ReactNode, useCallback, useRef, useState } from 'react';
 
 interface SortableBlockItemProps {
   id: string;
@@ -26,6 +26,23 @@ export function SortableBlockItem({
     isDragging,
   } = useSortable({ id });
 
+  // 二次确认删除
+  const [confirming, setConfirming] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleDeleteClick = useCallback(() => {
+    if (confirming) {
+      // 二次点击，执行删除
+      if (timerRef.current) clearTimeout(timerRef.current);
+      setConfirming(false);
+      onDelete(id);
+    } else {
+      // 首次点击，进入确认态
+      setConfirming(true);
+      timerRef.current = setTimeout(() => setConfirming(false), 3000);
+    }
+  }, [confirming, id, onDelete]);
+
   const style = {
     transform: CSS.Translate.toString(transform),
     transition,
@@ -43,6 +60,7 @@ export function SortableBlockItem({
       {/* 左侧：拖拽手柄 (Hover 时显现) */}
       <button
         type='button'
+        aria-label='拖拽排序'
         className='mt-1.5 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing text-zinc-400 hover:text-zinc-600 outline-none'
         {...attributes}
         {...listeners}
@@ -57,9 +75,12 @@ export function SortableBlockItem({
       {!isOnlyBlock && (
         <button
           type='button'
-          onClick={() => onDelete(id)}
-          className='mt-1.5 opacity-0 group-hover:opacity-100 transition-opacity text-zinc-300 hover:text-red-500 outline-none'
-          title='删除区块'
+          onClick={handleDeleteClick}
+          className={`mt-1.5 opacity-0 group-hover:opacity-100 transition-opacity outline-none ${
+            confirming ? 'text-red-500' : 'text-zinc-300 hover:text-red-500'
+          }`}
+          aria-label={confirming ? '确认删除' : '删除区块'}
+          title={confirming ? '确认删除' : '删除区块'}
         >
           <Trash2 className='h-4 w-4' />
         </button>

@@ -72,13 +72,13 @@ function createWikilinkPlugin(
 
         // Walk up from caret container to find .wikilink ancestor
         let wikilinkEl: HTMLElement | null = null;
-        let node: Node | null = caret.startContainer;
-        while (node) {
-          if (node instanceof HTMLElement && node.classList.contains('wikilink')) {
-            wikilinkEl = node;
+        let domNode: Node | null = caret.startContainer;
+        while (domNode) {
+          if (domNode instanceof HTMLElement && domNode.classList.contains('wikilink')) {
+            wikilinkEl = domNode;
             break;
           }
-          node = node.parentNode;
+          domNode = domNode.parentNode;
         }
         if (!wikilinkEl) return false;
 
@@ -96,16 +96,18 @@ function createWikilinkPlugin(
         // Verify offset falls within a [[...]] pattern
         const text = wikilinkEl.textContent || '';
         WIKILINK_REGEX.lastIndex = 0;
-        const match = WIKILINK_REGEX.exec(text);
-        if (match && offset >= match.index && offset < match.index + match[0].length) {
-          const title = match[1].trim();
-          const doc = documents.find(
-            (d: { id: string; title: string }) => d.title === title,
-          );
-          if (doc) {
-            onNavigate(doc.id);
+        let match: RegExpExecArray | null;
+        while ((match = WIKILINK_REGEX.exec(text)) !== null) {
+          if (offset >= match.index && offset < match.index + match[0].length) {
+            const title = match[1].trim();
+            const doc = documents.find(
+              (d: { id: string; title: string }) => d.title === title,
+            );
+            if (doc) {
+              onNavigate(doc.id);
+            }
+            return true;
           }
-          return true;
         }
 
         return false;

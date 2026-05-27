@@ -79,6 +79,47 @@
 
 ---
 
+## 阶段四收尾：测试 + Bug 修复 + UX 打磨 ✅
+
+**目标**：补全测试覆盖、修复代码审查发现的 15 个问题（功能 bug、UX 缺陷、无障碍、暗色模式）。
+
+**实现内容**：
+
+1. **wikilink-parser 单元测试（新建 `src/lib/__tests__/wikilink-parser.test.ts`）**
+   - 覆盖 `parseWikilinks`（单/多链接、无链接、空字符串、空格 trim、连续链接）
+   - 覆盖 `resolveWikilinkTitle`（精确匹配、无匹配、空数组、大小写敏感）
+   - 覆盖 `extractContext`（上下文提取、首尾边界、短文本）
+
+2. **修复 wikilink-decoration 两个 bug（`wikilink-decoration.ts`）**
+   - 多 wikilink 点击失效：`exec` 单次匹配改为 `while` 循环遍历所有匹配
+   - 变量名遮蔽：`let node: Node` 改为 `domNode`，避免遮蔽 ProseMirror 的 `Node` 类型
+
+3. **修复 RewriteToolbar 三个问题（`RewriteToolbar.tsx`）**
+   - Escape 关闭：加 `useEffect` 监听 Escape 键调用 `onClose()`
+   - 工具栏溢出顶部：检测 `position.y - 120 < 0` 时向下弹出
+   - 自定义指令无提交按钮：表单内加 ArrowRight 图标按钮
+
+4. **SortableBlockItem 删除确认 + 无障碍（`SortableBlockItem.tsx`）**
+   - 二次确认删除：首次点击变红 + "确认删除"，3 秒超时自动恢复
+   - 拖拽手柄加 `aria-label="拖拽排序"`，删除按钮加动态 `aria-label`
+
+5. **BacklinksPanel 错误态 + 空态 + emoji（`BacklinksPanel.tsx` + `types/index.ts` + `actions/note.ts`）**
+   - 错误态：加 `error` state + 重试按钮，不再静默吞掉错误
+   - 空态：`backlinks.length === 0` 时显示"暂无反向链接"
+   - emoji 修复：`Wikilink` 类型加 `sourceEmoji`，action 中填充，移除 `mockDocuments` 硬编码依赖
+
+6. **GraphView 空态 + 图谱页错误重试 + 无障碍（`GraphView.tsx` + `graph/page.tsx`）**
+   - 空图谱：`data.nodes.length === 0` 时渲染提示信息
+   - 错误重试：错误状态加"重试"按钮
+   - Canvas 无障碍：加 `role="img"`、`aria-label`、`tabIndex`、fallback `<p>`
+
+7. **暗色模式颜色适配（`globals.css` + `GraphView.tsx`）**
+   - wikilink 样式：颜色改为 CSS 变量 `--color-wikilink` / `--color-wikilink-hover`
+   - 图谱 canvas：颜色改为 `--graph-edge`、`--graph-node`、`--graph-node-stroke`、`--graph-label` 变量
+   - `:root` 和 `.dark` 中分别定义亮/暗色值
+
+---
+
 # 2026-05-15 工作日志
 
 ## 优化与修复

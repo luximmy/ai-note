@@ -1,9 +1,9 @@
 // src/components/editor/RewriteToolbar.tsx
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Sparkles, Wand2, Minimize2, Languages } from 'lucide-react';
+import { Sparkles, Wand2, Minimize2, Languages, ArrowRight } from 'lucide-react';
 
 interface RewriteToolbarProps {
   isOpen: boolean;
@@ -16,8 +16,24 @@ export function RewriteToolbar({
   isOpen,
   position,
   onRewrite,
+  onClose,
 }: RewriteToolbarProps) {
   const [customInput, setCustomInput] = useState('');
+
+  // Escape 关闭工具栏
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        onClose();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown, true);
+    return () => window.removeEventListener('keydown', handleKeyDown, true);
+  }, [isOpen, onClose]);
 
   // 如果没有挂载、没有打开或没有坐标，则不渲染
   if (!isOpen || !position || typeof document === 'undefined') return null;
@@ -53,14 +69,17 @@ export function RewriteToolbar({
     },
   ];
 
+  // 边界翻转：工具栏靠近顶部时向下弹出
+  const TOOLBAR_HEIGHT = 120;
+  const flipBelow = position.y - TOOLBAR_HEIGHT < 0;
+
   return createPortal(
     <div
       className='fixed z-9999 bg-white border border-zinc-200 rounded-xl shadow-xl overflow-hidden flex flex-col font-sans animate-in fade-in zoom-in-95 duration-100 w-64'
       style={{
-        // 定位在选区正上方，并向上偏移一点，居中对齐
-        top: position.y - 10,
+        top: flipBelow ? position.y + 10 : position.y - 10,
         left: position.x,
-        transform: 'translate(-50%, -100%)',
+        transform: flipBelow ? 'translate(-50%, 0)' : 'translate(-50%, -100%)',
       }}
       // 阻止鼠标事件冒泡，防止点击菜单时导致 Tiptap 失去焦点或选区消失
       onMouseDown={(e) => e.preventDefault()}
@@ -88,6 +107,13 @@ export function RewriteToolbar({
           placeholder='输入自定义改写指令...'
           className='flex-1 text-xs px-2 py-1.5 outline-none bg-zinc-100 rounded-md focus:ring-2 focus:ring-indigo-500/20 transition-all'
         />
+        <button
+          type='submit'
+          className='flex items-center justify-center w-7 h-7 text-zinc-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-md transition-colors'
+          aria-label='提交改写指令'
+        >
+          <ArrowRight className='w-3.5 h-3.5' />
+        </button>
       </form>
     </div>,
     document.body,

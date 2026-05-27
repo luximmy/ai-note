@@ -39,6 +39,7 @@ export function GraphView({ data }: GraphViewProps) {
   const router = useRouter();
 
   useEffect(() => {
+    if (data.nodes.length === 0) return;
     const canvas = canvasRef.current;
     const container = containerRef.current;
     if (!canvas || !container) return;
@@ -46,6 +47,15 @@ export function GraphView({ data }: GraphViewProps) {
     if (!ctx) return;
 
     const dpr = window.devicePixelRatio || 1;
+
+    // Read CSS custom properties for theme-aware colors
+    const style = getComputedStyle(container);
+    const colors = {
+      edge: style.getPropertyValue('--graph-edge').trim() || '#d4d4d8',
+      node: style.getPropertyValue('--graph-node').trim() || '#6366f1',
+      nodeStroke: style.getPropertyValue('--graph-node-stroke').trim() || '#ffffff',
+      label: style.getPropertyValue('--graph-label').trim() || '#18181b',
+    };
 
     // Transform state for zoom & pan
     let scale = 1;
@@ -107,7 +117,7 @@ export function GraphView({ data }: GraphViewProps) {
       ctx!.scale(scale, scale);
 
       // Draw edges
-      ctx!.strokeStyle = '#d4d4d8';
+      ctx!.strokeStyle = colors.edge;
       ctx!.lineWidth = 1.5;
       for (const link of links) {
         const sx = (link.source as SimNode).x;
@@ -129,14 +139,14 @@ export function GraphView({ data }: GraphViewProps) {
 
         ctx!.beginPath();
         ctx!.arc(node.x, node.y, r, 0, Math.PI * 2);
-        ctx!.fillStyle = '#6366f1';
+        ctx!.fillStyle = colors.node;
         ctx!.fill();
-        ctx!.strokeStyle = '#fff';
+        ctx!.strokeStyle = colors.nodeStroke;
         ctx!.lineWidth = 2;
         ctx!.stroke();
 
         ctx!.font = '12px sans-serif';
-        ctx!.fillStyle = '#18181b';
+        ctx!.fillStyle = colors.label;
         ctx!.textAlign = 'center';
         const label =
           node.emoji +
@@ -294,12 +304,28 @@ export function GraphView({ data }: GraphViewProps) {
     };
   }, [data, router]);
 
+  if (data.nodes.length === 0) {
+    return (
+      <div className='flex items-center justify-center h-full min-h-[400px] border border-zinc-200 rounded-xl bg-white'>
+        <div className='text-center'>
+          <p className='text-zinc-400 text-sm'>暂无知识图谱数据</p>
+          <p className='text-zinc-300 text-xs mt-1'>创建更多笔记并使用 [[双链]] 来生成图谱</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div ref={containerRef} className='w-full h-full min-h-[400px]'>
       <canvas
         ref={canvasRef}
+        role='img'
+        aria-label='知识图谱 - 显示笔记之间的链接关系'
+        tabIndex={0}
         className='w-full h-full border border-zinc-200 rounded-xl bg-white cursor-grab active:cursor-grabbing'
-      />
+      >
+        <p>知识图谱：显示 {data.nodes.length} 篇笔记和 {data.edges.length} 条链接关系</p>
+      </canvas>
     </div>
   );
 }

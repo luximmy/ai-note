@@ -117,6 +117,7 @@ export interface Wikilink {
   targetId: string; // 空字符串 = 幽灵链接（目标不存在）
   targetTitle: string;
   sourceTitle: string;
+  sourceEmoji?: string;
   contextPreview: string;
 }
 

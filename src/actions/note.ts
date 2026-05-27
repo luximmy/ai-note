@@ -210,6 +210,7 @@ export async function getBacklinksForNote(noteId: string): Promise<Wikilink[]> {
             targetId: noteId,
             targetTitle: targetDoc.title,
             sourceTitle: doc.title,
+            sourceEmoji: doc.emoji,
             contextPreview: extractContext(
               block.content,
               match.index,
