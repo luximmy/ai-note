@@ -44,9 +44,9 @@ export function ChatPanel() {
 
   useEffect(() => {
     if (scrollRef.current) {
-      scrollRef.current.scrollIntoView({ behavior: 'smooth' });
+      scrollRef.current.scrollIntoView({ block: 'nearest' });
     }
-  }, [messages, status, error]); // ✨ 把 error 加入依赖，保证报错时滚动到底部
+  }, [messages, status, error]);
 
   // ✨ 3. 监听 error 状态，触发全局 Toast
   useEffect(() => {
@@ -82,9 +82,7 @@ export function ChatPanel() {
           ) : (
             <div className='space-y-6 pb-4'>
               {messages.map((m) => {
-                // Hide assistant messages that have no text content yet (prevents empty bubble during streaming)
                 const hasText = m.parts?.some((p) => p.type === 'text' && 'text' in p && p.text);
-                if (m.role !== 'user' && !hasText) return null;
 
                 return (
                 <div
@@ -111,6 +109,15 @@ export function ChatPanel() {
                           return null;
                         })}
                       </div>
+                    ) : !hasText ? (
+                      <div className='flex items-center gap-2'>
+                        <div className='flex gap-1'>
+                          <span className='w-1.5 h-1.5 rounded-full bg-muted-foreground animate-bounce' style={{ animationDelay: '0ms' }} />
+                          <span className='w-1.5 h-1.5 rounded-full bg-muted-foreground animate-bounce' style={{ animationDelay: '150ms' }} />
+                          <span className='w-1.5 h-1.5 rounded-full bg-muted-foreground animate-bounce' style={{ animationDelay: '300ms' }} />
+                        </div>
+                        <span className='animate-pulse text-xs text-muted-foreground'>正在阅读笔记内容...</span>
+                      </div>
                     ) : (() => {
                       // Extract citations from data parts
                       const citationsPart = m.parts?.find(
@@ -129,7 +136,9 @@ export function ChatPanel() {
                         [...rawText.matchAll(/\[(\d+)\]/g)].map((m) => parseInt(m[1], 10)),
                       );
                       const hasCitations = citedIndices.size > 0;
-                      const citedSources = sources.filter((_, i) => citedIndices.has(i + 1));
+                      const citedSources = sources
+                        .map((s, i) => ({ source: s, displayIndex: i + 1 }))
+                        .filter((_, i) => citedIndices.has(i + 1));
                       const textWithCiteTags = injectCiteTags(rawText);
 
                       return (
@@ -296,32 +305,6 @@ export function ChatPanel() {
                 </div>
               )}
 
-              {status === 'submitted' && !error && (
-                <div className='flex flex-col items-start'>
-                  <div className='text-xs font-semibold text-muted-foreground mb-1'>
-                    ✨ AI Copilot
-                  </div>
-                  <div className='text-sm px-4 py-2.5 rounded-xl bg-muted text-muted-foreground flex items-center gap-3'>
-                    <div className='flex gap-1.5'>
-                      <span
-                        className='w-1.5 h-1.5 rounded-full bg-muted-foreground animate-bounce'
-                        style={{ animationDelay: '0ms' }}
-                      />
-                      <span
-                        className='w-1.5 h-1.5 rounded-full bg-muted-foreground animate-bounce'
-                        style={{ animationDelay: '150ms' }}
-                      />
-                      <span
-                        className='w-1.5 h-1.5 rounded-full bg-muted-foreground animate-bounce'
-                        style={{ animationDelay: '300ms' }}
-                      />
-                    </div>
-                    <span className='animate-pulse text-xs'>
-                      正在阅读笔记内容...
-                    </span>
-                  </div>
-                </div>
-              )}
               <div ref={scrollRef} />
             </div>
           )}
