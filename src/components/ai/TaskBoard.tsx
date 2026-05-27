@@ -63,12 +63,12 @@ export function TaskBoard({
   const doneCount = normalizedTasks.filter((t) => t.status === 'done').length;
 
   return (
-    <div className='bg-zinc-50 border border-zinc-200 rounded-xl p-4 my-4 font-sans shadow-sm'>
-      <div className='flex items-center justify-between mb-4 pb-2 border-b border-zinc-200'>
-        <h3 className='font-semibold text-zinc-800 flex items-center gap-2'>
+    <div className='bg-muted border border-border rounded-xl p-4 my-4 font-sans shadow-sm'>
+      <div className='flex items-center justify-between mb-4 pb-2 border-b border-border'>
+        <h3 className='font-semibold text-foreground flex items-center gap-2'>
           <span>📋</span> AI 生成任务看板
         </h3>
-        <span className='text-xs font-medium text-zinc-500 bg-zinc-200/50 px-2 py-1 rounded-full'>
+        <span className='text-xs font-medium text-muted-foreground bg-secondary px-2 py-1 rounded-full'>
           {doneCount} / {normalizedTasks.length}
         </span>
       </div>
@@ -81,20 +81,20 @@ export function TaskBoard({
             onClick={() => toggleTaskStatus(task.id)}
             className={`flex items-start gap-3 p-2.5 rounded-lg transition-colors cursor-pointer ${
               task.status === 'done'
-                ? 'bg-zinc-100/50'
-                : 'bg-white border border-zinc-100 shadow-sm hover:border-indigo-200'
+                ? 'bg-secondary/50'
+                : 'bg-background border border-border shadow-sm hover:border-primary/30'
             }`}
           >
             {task.status === 'done' ? (
               <CheckCircle2 className='w-5 h-5 text-emerald-500 shrink-0 mt-0.5' />
             ) : (
-              <Circle className='w-5 h-5 text-zinc-300 shrink-0 mt-0.5' />
+              <Circle className='w-5 h-5 text-muted-foreground/50 shrink-0 mt-0.5' />
             )}
             <span
               className={`text-sm leading-relaxed ${
                 task.status === 'done'
-                  ? 'text-zinc-400 line-through'
-                  : 'text-zinc-700'
+                  ? 'text-muted-foreground line-through'
+                  : 'text-foreground'
               }`}
             >
               {task.title}

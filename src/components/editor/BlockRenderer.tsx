@@ -473,7 +473,7 @@ export function BlockRenderer({
   };
 
   if (!blocks || blocks.length === 0) {
-    return <div className='text-zinc-400 italic p-4'>暂无内容</div>;
+    return <div className='text-muted-foreground italic p-4'>暂无内容</div>;
   }
 
   // 找出当前正在被拖拽的 Block 数据
@@ -530,10 +530,10 @@ export function BlockRenderer({
           }}
         >
           {activeBlock && ActiveComponent ? (
-            <div className='w-full flex items-start gap-2 py-1 cursor-grabbing scale-[1.02] transition-transform rounded-xl shadow-[0_20px_40px_-15px_rgba(0,0,0,0.15)] bg-white/70 backdrop-blur-md ring-1 ring-zinc-200/50'>
+            <div className='w-full flex items-start gap-2 py-1 cursor-grabbing scale-[1.02] transition-transform rounded-xl shadow-[0_20px_40px_-15px_rgba(0,0,0,0.15)] bg-background/70 backdrop-blur-md ring-1 ring-border/50'>
               {/* 1. 模拟左侧手柄的严格占位，彻底解决水平跳动问题 */}
               <div className='mt-1.5 w-4 shrink-0 pl-1'>
-                <GripVertical className='h-4 w-4 text-zinc-400 opacity-50' />
+                <GripVertical className='h-4 w-4 text-muted-foreground opacity-50' />
               </div>
 
               {/* 2. 真实的 Block 内容 */}

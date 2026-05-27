@@ -9,6 +9,7 @@ import { mockDocuments } from '@/mock/data';
 import { ChatPanel } from '@/components/ai/ChatPanel';
 import { Network } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
+import { ThemeToggle } from '@/components/theme-toggle';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { isSidebarOpen, isAgentPanelOpen } = useAppStore();
@@ -50,26 +51,29 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     <div className='flex h-screen w-full bg-background overflow-hidden'>
       {/* 1. 左侧栏 (Sidebar) 保持不变 */}
       {isSidebarOpen && (
-        <aside className='w-65 h-full border-r bg-zinc-50/50 flex flex-col shrink-0'>
-          <div className='p-4 font-bold text-zinc-900'>ai-note</div>
+        <aside className='w-65 h-full border-r bg-sidebar flex flex-col shrink-0'>
+          <div className='p-4 flex items-center justify-between'>
+            <span className='font-bold text-sidebar-foreground'>ai-note</span>
+            <ThemeToggle />
+          </div>
           <ScrollArea className='flex-1 px-3'>
             <div className='space-y-1'>
-              <div className='text-xs font-medium text-zinc-500 py-2 px-2'>
+              <div className='text-xs font-medium text-muted-foreground py-2 px-2'>
                 导航
               </div>
               <Link
                 href='/app/graph'
                 className={`flex items-center gap-2 px-2 py-1.5 text-sm rounded-md transition-colors ${
                   pathname === '/app/graph'
-                    ? 'bg-zinc-200/80 font-medium text-zinc-900'
-                    : 'hover:bg-zinc-200/50 text-zinc-600'
+                    ? 'bg-sidebar-accent font-medium text-sidebar-accent-foreground'
+                    : 'hover:bg-sidebar-accent text-sidebar-foreground/70'
                 }`}
               >
                 <Network className='h-4 w-4' />
                 知识图谱
               </Link>
 
-              <div className='text-xs font-medium text-zinc-500 py-2 px-2 pt-4'>
+              <div className='text-xs font-medium text-muted-foreground py-2 px-2 pt-4'>
                 最近笔记
               </div>
               {mockDocuments.map((doc) => {
@@ -81,8 +85,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                     href={href}
                     className={`block px-2 py-1.5 text-sm rounded-md transition-colors ${
                       isActive
-                        ? 'bg-zinc-200/80 font-medium text-zinc-900'
-                        : 'hover:bg-zinc-200/50 text-zinc-600'
+                        ? 'bg-sidebar-accent font-medium text-sidebar-accent-foreground'
+                        : 'hover:bg-sidebar-accent text-sidebar-foreground/70'
                     }`}
                   >
                     <span className='mr-2'>{doc.emoji || '📄'}</span>
@@ -96,7 +100,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       )}
 
       {/* 2. 中间主工作区 */}
-      <main className='flex-1 h-full flex flex-col relative overflow-hidden bg-white'>
+      <main className='flex-1 h-full flex flex-col relative overflow-hidden bg-background'>
         <ScrollArea className='h-full'>
           <div
             className={
@@ -114,7 +118,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       {isAgentPanelOpen && (
         <aside
           style={{ width: agentPanelWidth }} // ✨ 应用动态宽度
-          className='h-full border-l bg-white flex flex-col shrink-0 shadow-sm relative'
+          className='h-full border-l bg-background flex flex-col shrink-0 shadow-sm relative'
         >
           {/* ✨ 拖拽手柄 */}
           <div
@@ -123,7 +127,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               document.body.style.cursor = 'col-resize';
               document.body.style.userSelect = 'none'; // 防止拖拽时选中文字
             }}
-            className='absolute left-0 top-0 bottom-0 w-1.5 -ml-0.75cursor-col-resize hover:bg-indigo-500/50 transition-colors z-50'
+            className='absolute left-0 top-0 bottom-0 w-1.5 -ml-0.75cursor-col-resize hover:bg-primary/50 transition-colors z-50'
           />
 
           <div className='p-4 border-b flex items-center justify-between shrink-0'>

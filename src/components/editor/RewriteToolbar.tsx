@@ -75,7 +75,7 @@ export function RewriteToolbar({
 
   return createPortal(
     <div
-      className='fixed z-9999 bg-white border border-zinc-200 rounded-xl shadow-xl overflow-hidden flex flex-col font-sans animate-in fade-in zoom-in-95 duration-100 w-64'
+      className='fixed z-9999 bg-popover border border-border rounded-xl shadow-xl overflow-hidden flex flex-col font-sans animate-in fade-in zoom-in-95 duration-100 w-64'
       style={{
         top: flipBelow ? position.y + 10 : position.y - 10,
         left: position.x,
@@ -84,12 +84,12 @@ export function RewriteToolbar({
       // 阻止鼠标事件冒泡，防止点击菜单时导致 Tiptap 失去焦点或选区消失
       onMouseDown={(e) => e.preventDefault()}
     >
-      <div className='p-1 flex flex-wrap gap-1 bg-zinc-50 border-b border-zinc-100'>
+      <div className='p-1 flex flex-wrap gap-1 bg-muted border-b border-border'>
         {quickActions.map((action) => (
           <button
             key={action.label}
             onClick={() => onRewrite(action.prompt)}
-            className='flex items-center gap-1.5 px-2 py-1.5 text-xs text-zinc-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-md transition-colors'
+            className='flex items-center gap-1.5 px-2 py-1.5 text-xs text-foreground hover:text-primary hover:bg-accent rounded-md transition-colors'
           >
             {action.icon}
             <span>{action.label}</span>
@@ -105,11 +105,11 @@ export function RewriteToolbar({
           value={customInput}
           onChange={(e) => setCustomInput(e.target.value)}
           placeholder='输入自定义改写指令...'
-          className='flex-1 text-xs px-2 py-1.5 outline-none bg-zinc-100 rounded-md focus:ring-2 focus:ring-indigo-500/20 transition-all'
+          className='flex-1 text-xs px-2 py-1.5 outline-none bg-muted rounded-md focus:ring-2 focus:ring-ring/20 transition-all'
         />
         <button
           type='submit'
-          className='flex items-center justify-center w-7 h-7 text-zinc-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-md transition-colors'
+          className='flex items-center justify-center w-7 h-7 text-muted-foreground hover:text-primary hover:bg-accent rounded-md transition-colors'
           aria-label='提交改写指令'
         >
           <ArrowRight className='w-3.5 h-3.5' />

@@ -86,7 +86,7 @@ export function RichTextEditor({
       Placeholder.configure({
         placeholder: '输入内容，或输入 "/" 唤起菜单...',
         emptyEditorClass:
-          'is-editor-empty before:content-[attr(data-placeholder)] before:text-zinc-400 before:absolute before:pointer-events-none',
+          'is-editor-empty before:content-[attr(data-placeholder)] before:text-muted-foreground before:absolute before:pointer-events-none',
       }),
     ],
     // 💥 修复 1：防抖处理选区更新

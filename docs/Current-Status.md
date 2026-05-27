@@ -3,8 +3,8 @@
 ## 1. 项目基本信息
 
 - **项目名称**：ai-note
-- **当前阶段**：阶段三全部完成；阶段四全部完成（拖拽排序 ✅ + AI 局部重写 ✅ + 知识网络 ✅ + 收尾打磨 ✅）
-- **当前重心**：阶段四已收官，可开启阶段五
+- **当前阶段**：阶段三全部完成；阶段四全部完成（拖拽排序 ✅ + AI 局部重写 ✅ + 知识网络 ✅ + 收尾打磨 ✅ + 暗色模式 ✅）
+- **当前重心**：阶段四已收官（含暗色模式），可开启阶段五
 - **上次更新时间**：2026-05-27
 
 ## 2. 已完成里程碑 (Completed)
@@ -51,10 +51,11 @@
 - [x] **AI 局部重写完成（任务 4.2）**：选中文字后浮现浮动工具栏（智能润色/扩写/精简/翻译/自定义指令），`/api/rewrite` Edge API 调用 DeepSeek 流式返回改写结果，`RichTextEditor` 逐 token 原位替换（300ms 选区防抖 + 延迟删除避免空白闪烁 + loading 态过渡），完成触发保存同步 + toast 反馈，失败支持 Ctrl+Z 撤销恢复。
 - [x] **知识网络完成（任务 4.3）**：`[[wikilink]]` 双向链接语法（`wikilink-parser.ts` 解析 + `wikilink-decoration.ts` ProseMirror 插件实现高亮与点击跳转），`d3-force` 力导向图谱可视化（`GraphView.tsx` 支持缩放/平移/点击节点跳转），反向链接面板（`BacklinksPanel.tsx` 展示当前笔记的引用来源与上下文预览），图谱全屏页面（`app/graph/page.tsx`），侧边栏新增图谱入口。图谱 auto-fit 在 simulation 结束后一次性执行，避免抽动。
 - [x] **阶段四收尾打磨完成**：wikilink-parser 单元测试（12 个用例）；修复 wikilink-decoration 多链接点击失效 + 变量遮蔽 bug；RewriteToolbar 加 Escape 关闭 + 视口边界翻转 + 提交按钮；SortableBlockItem 加二次确认删除 + aria-label 无障碍；BacklinksPanel 加错误态/空态提示 + sourceEmoji 解耦 mockDocuments；GraphView 加空态提示 + Canvas ARIA 属性 + 图谱页错误重试；暗色模式颜色适配（wikilink + 图谱 canvas 颜色改为 CSS 变量）。
+- [x] **暗色模式全量实现完成**：安装 `next-themes` + `ThemeProvider`（`attribute="class"` + `defaultTheme="system"`）；创建 `ThemeToggle` 组件（亮色/暗色/跟随系统三级切换）；21 个文件 43 处硬编码颜色迁移为 shadcn 语义化 token（`bg-background`、`text-foreground`、`bg-muted`、`text-muted-foreground`、`bg-primary`、`border-border` 等）；CodeBlock 保留深色不变（有意设计）；测试 + lint 零错误。
 
 ## 3. 进行中的任务 (In Progress)
 
-- 阶段四已全部完成（含收尾打磨），可开启阶段五
+- 阶段四已全部完成（含收尾打磨 + 暗色模式），可开启阶段五
 
 ## 4. 下一阶段任务派发 (Next Steps)
 

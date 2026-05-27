@@ -61,7 +61,7 @@ export function SortableBlockItem({
       <button
         type='button'
         aria-label='拖拽排序'
-        className='mt-1.5 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing text-zinc-400 hover:text-zinc-600 outline-none'
+        className='mt-1.5 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground outline-none'
         {...attributes}
         {...listeners}
       >
@@ -77,7 +77,7 @@ export function SortableBlockItem({
           type='button'
           onClick={handleDeleteClick}
           className={`mt-1.5 opacity-0 group-hover:opacity-100 transition-opacity outline-none ${
-            confirming ? 'text-red-500' : 'text-zinc-300 hover:text-red-500'
+            confirming ? 'text-red-500' : 'text-muted-foreground/50 hover:text-destructive'
           }`}
           aria-label={confirming ? '确认删除' : '删除区块'}
           title={confirming ? '确认删除' : '删除区块'}

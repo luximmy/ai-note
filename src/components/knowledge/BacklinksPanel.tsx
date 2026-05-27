@@ -36,20 +36,20 @@ export function BacklinksPanel({ noteId }: BacklinksPanelProps) {
 
   if (loading) {
     return (
-      <div className='border-t border-zinc-100 pt-6 mt-8'>
+      <div className='border-t border-border pt-6 mt-8'>
         <div className='flex items-center gap-2 mb-4'>
-          <ArrowLeftRight className='w-4 h-4 text-zinc-400' />
-          <span className='text-sm font-semibold text-zinc-400'>被引用</span>
+          <ArrowLeftRight className='w-4 h-4 text-muted-foreground' />
+          <span className='text-sm font-semibold text-muted-foreground'>被引用</span>
         </div>
         <div className='space-y-3'>
           {[1, 2].map((i) => (
             <div
               key={i}
-              className='relative pl-4 py-3 pr-3 rounded-lg bg-zinc-50 animate-pulse'
+              className='relative pl-4 py-3 pr-3 rounded-lg bg-muted animate-pulse'
             >
-              <div className='absolute left-0 top-3 bottom-3 w-0.5 rounded-full bg-zinc-200' />
-              <div className='h-4 w-32 bg-zinc-200 rounded mb-2' />
-              <div className='h-3 w-56 bg-zinc-100 rounded' />
+              <div className='absolute left-0 top-3 bottom-3 w-0.5 rounded-full bg-muted-foreground/20' />
+              <div className='h-4 w-32 bg-muted-foreground/20 rounded mb-2' />
+              <div className='h-3 w-56 bg-muted-foreground/10 rounded' />
             </div>
           ))}
         </div>
@@ -59,10 +59,10 @@ export function BacklinksPanel({ noteId }: BacklinksPanelProps) {
 
   if (error) {
     return (
-      <div className='border-t border-zinc-100 pt-6 mt-8'>
+      <div className='border-t border-border pt-6 mt-8'>
         <div className='flex items-center gap-2 mb-4'>
-          <ArrowLeftRight className='w-4 h-4 text-zinc-400' />
-          <span className='text-sm font-semibold text-zinc-400'>被引用</span>
+          <ArrowLeftRight className='w-4 h-4 text-muted-foreground' />
+          <span className='text-sm font-semibold text-muted-foreground'>被引用</span>
         </div>
         <div className='text-center py-4'>
           <p className='text-xs text-red-400 mb-2'>{error}</p>
@@ -73,7 +73,7 @@ export function BacklinksPanel({ noteId }: BacklinksPanelProps) {
               setError(null);
               setRetryCount((c) => c + 1);
             }}
-            className='text-xs text-indigo-500 hover:text-indigo-700 underline'
+            className='text-xs text-primary hover:text-primary/80 underline'
           >
             重试
           </button>
@@ -83,33 +83,33 @@ export function BacklinksPanel({ noteId }: BacklinksPanelProps) {
   }
 
   return (
-    <div className='border-t border-zinc-100 pt-6 mt-8'>
+    <div className='border-t border-border pt-6 mt-8'>
       <div className='flex items-center gap-2 mb-4'>
-        <ArrowLeftRight className='w-4 h-4 text-zinc-500' />
-        <h3 className='text-sm font-semibold text-zinc-700'>
+        <ArrowLeftRight className='w-4 h-4 text-muted-foreground' />
+        <h3 className='text-sm font-semibold text-foreground'>
           被引用 ({backlinks.length})
         </h3>
       </div>
       {backlinks.length === 0 ? (
-        <p className='text-xs text-zinc-400 py-2'>暂无反向链接</p>
+        <p className='text-xs text-muted-foreground py-2'>暂无反向链接</p>
       ) : (
         <div className='space-y-3'>
           {backlinks.map((bl, i) => (
             <Link
               key={`${bl.sourceId}-${i}`}
               href={`/app/note/${bl.sourceId}`}
-              className='group block relative pl-4 py-3 pr-3 rounded-lg bg-zinc-50 hover:bg-indigo-50 transition-colors duration-200'
+              className='group block relative pl-4 py-3 pr-3 rounded-lg bg-muted hover:bg-accent transition-colors duration-200'
             >
-              <div className='absolute left-0 top-3 bottom-3 w-0.5 rounded-full bg-indigo-300 group-hover:bg-indigo-500 transition-colors' />
+              <div className='absolute left-0 top-3 bottom-3 w-0.5 rounded-full bg-primary/40 group-hover:bg-primary transition-colors' />
               <div className='flex items-center gap-2 mb-1'>
                 <span className='text-base leading-none'>
                   {bl.sourceEmoji ?? '📝'}
                 </span>
-                <span className='text-sm font-medium text-zinc-800 group-hover:text-indigo-700 transition-colors'>
+                <span className='text-sm font-medium text-foreground group-hover:text-primary transition-colors'>
                   {bl.sourceTitle}
                 </span>
               </div>
-              <div className='text-xs text-zinc-500 line-clamp-2 italic pl-7'>
+              <div className='text-xs text-muted-foreground line-clamp-2 italic pl-7'>
                 &ldquo;{bl.contextPreview}&rdquo;
               </div>
             </Link>

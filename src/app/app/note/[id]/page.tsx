@@ -31,7 +31,7 @@ export default async function NotePage({ params }: NotePageProps) {
     <article className='space-y-8 pb-32'>
       <header className='space-y-4'>
         <div className='text-5xl'>{note.emoji || '📝'}</div>
-        <h1 className='text-4xl font-bold tracking-tight text-zinc-900'>
+        <h1 className='text-4xl font-bold tracking-tight text-foreground'>
           {note.title}
         </h1>
       </header>

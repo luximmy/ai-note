@@ -1,5 +1,67 @@
 # 2026-05-27 工作日志
 
+## 暗色模式全量实现 ✅
+
+**目标**：为项目实现完整的暗色模式支持，包括主题切换 UI 和全量颜色迁移。
+
+**实现内容**：
+
+1. **主题基础设施（Phase 1）**
+   - 安装 `next-themes`，配置 `ThemeProvider`（`attribute="class"` + `defaultTheme="system"` + `enableSystem`）
+   - `src/app/layout.tsx`：`<html>` 加 `suppressHydrationWarning`，`<body>` 内包裹 `ThemeProvider`
+
+2. **主题切换组件（Phase 2）**
+   - 新建 `src/components/theme-toggle.tsx`：`useTheme()` + Sun/Moon 图标 + shadcn DropdownMenu（亮色/暗色/跟随系统）
+   - 安装 shadcn `dropdown-menu` 组件
+   - `src/app/app/layout.tsx`：侧边栏头部放置 `ThemeToggle`
+
+3. **P0 颜色迁移（高可见度页面）**
+   - `src/app/app/layout.tsx`：侧边栏 + 主区域，~13 处 `bg-white/text-zinc-*/bg-zinc-*` → `bg-background/text-foreground/bg-sidebar`
+   - `src/components/ai/ChatPanel.tsx`：聊天面板，~18 处迁移（消息气泡、输入框、加载动画）
+   - `src/app/app/note/[id]/page.tsx`：标题 `text-zinc-900` → `text-foreground`
+
+4. **P1 颜色迁移（编辑器组件）**
+   - `SlashMenu.tsx`：弹出菜单 `bg-white` → `bg-popover`，选中项 → `bg-accent`
+   - `RewriteToolbar.tsx`：工具栏 + 快捷操作按钮颜色迁移
+   - `TodoBlock.tsx`：复选框 + 文字颜色（checked/unchecked 两种状态）
+   - `GenerativeUIBlock.tsx`：streaming 动画点 + 边框 → `bg-primary` 系列
+   - `HeadingBlock.tsx`、`ParagraphBlock.tsx`：文字颜色 → `text-foreground`
+   - `BlockRenderer.tsx`、`SortableBlockItem.tsx`、`RichTextEditor.tsx`：拖拽手柄 + 空态 + placeholder
+
+5. **P2+P3 颜色迁移（辅助 UI + 状态页）**
+   - `BacklinksPanel.tsx`：skeleton + 错误态 + 链接卡片全量迁移
+   - `GraphView.tsx`：空态提示 + canvas 边框
+   - `TaskBoard.tsx`：看板容器 + 任务项 + 计数徽章
+   - `CodeBlock.tsx`：语言标签（保留 `bg-zinc-950` 深色代码块不变）
+   - `loading.tsx`、`error.tsx`、`not-found.tsx`：骨架屏 + 错误/404 页面
+   - `graph/page.tsx`、`page.tsx`：图谱页 + 仪表盘首页
+
+6. **测试修复**
+   - `loading.test.tsx`：断言 `.bg-zinc-100` → `.bg-muted`
+   - `theme-toggle.tsx`：`useEffect` 加 `eslint-disable-line` 注释（hydration guard 模式）
+
+**技术决策**：
+- `next-themes` + `attribute="class"` 模式：利用 shadcn 已有的 `.dark` CSS 变量基础设施，零额外样式成本
+- `defaultTheme="system"`：默认跟随系统偏好，用户可手动覆盖
+- `disableTransitionOnChange`：切换主题时禁用 CSS transition，防止闪烁
+- CodeBlock 保留 `bg-zinc-950`：代码块有意使用深色背景（类似 IDE 体验），不随主题变化
+- shadcn 语义化 token 全量替代硬编码颜色：一处修改全局生效，未来新增主题变体零成本
+
+**颜色映射规则**：
+| 硬编码 | 语义化替代 | 场景 |
+|--------|-----------|------|
+| `bg-white` | `bg-background` / `bg-popover` / `bg-card` | 页面/弹窗/卡片 |
+| `text-zinc-900/800/700` | `text-foreground` | 主文本 |
+| `text-zinc-600/500/400` | `text-muted-foreground` | 次要文本 |
+| `bg-zinc-50/100` | `bg-muted` | 浅背景 |
+| `border-zinc-200/100` | `border-border` | 边框 |
+| `bg-zinc-900 text-white` | `bg-primary text-primary-foreground` | 主按钮 |
+| `hover:bg-indigo-50` | `hover:bg-accent` | 强调 hover |
+
+---
+
+## 阶段四收尾：测试 + Bug 修复 + UX 打磨 ✅
+
 ## 完成任务
 
 ### 任务 4.3：知识网络 ✅

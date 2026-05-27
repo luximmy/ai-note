@@ -20,7 +20,7 @@ export default function GraphPage() {
 
   if (loading) {
     return (
-      <div className='flex items-center justify-center h-full text-zinc-500'>
+      <div className='flex items-center justify-center h-full text-muted-foreground'>
         加载图谱数据...
       </div>
     );
@@ -37,7 +37,7 @@ export default function GraphPage() {
             setError(false);
             setRetryCount((c) => c + 1);
           }}
-          className='text-sm text-indigo-500 hover:text-indigo-700 underline'
+          className='text-sm text-primary hover:text-primary/80 underline'
         >
           重试
         </button>
@@ -48,8 +48,8 @@ export default function GraphPage() {
   return (
     <div className='h-full flex flex-col'>
       <div className='mb-4 shrink-0'>
-        <h1 className='text-2xl font-bold text-zinc-900'>知识图谱</h1>
-        <p className='text-sm text-zinc-500 mt-1'>
+        <h1 className='text-2xl font-bold text-foreground'>知识图谱</h1>
+        <p className='text-sm text-muted-foreground mt-1'>
           {data.nodes.length} 篇笔记, {data.edges.length} 条链接 — 点击节点跳转
         </p>
       </div>

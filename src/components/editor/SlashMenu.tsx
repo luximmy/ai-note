@@ -188,13 +188,13 @@ export function SlashMenu({
 
   return createPortal(
     <div
-      className='fixed z-9999 w-64 bg-white border border-zinc-200 rounded-xl shadow-xl overflow-hidden py-1.5 font-sans animate-in fade-in zoom-in-95 duration-100'
+      className='fixed z-9999 w-64 bg-popover border border-border rounded-xl shadow-xl overflow-hidden py-1.5 font-sans animate-in fade-in zoom-in-95 duration-100'
       style={{
         top: menuStyle.top,
         left: menuStyle.left,
       }}
     >
-      <div className='px-3 py-1.5 text-xs font-semibold text-zinc-500'>
+      <div className='px-3 py-1.5 text-xs font-semibold text-muted-foreground'>
         基础区块
       </div>
       {MENU_ITEMS.map((item, index) => (
@@ -209,18 +209,18 @@ export function SlashMenu({
           onMouseEnter={() => dispatch({ type: 'SET_INDEX', index })}
           className={`w-full flex items-center gap-3 px-3 py-2 text-left transition-colors ${
             index === selectedIndex
-              ? 'bg-zinc-100'
-              : 'bg-transparent hover:bg-zinc-50'
+              ? 'bg-accent'
+              : 'bg-transparent hover:bg-accent'
           }`}
         >
-          <div className='flex items-center justify-center w-8 h-8 rounded border border-zinc-200 bg-white text-zinc-600 font-medium shrink-0'>
+          <div className='flex items-center justify-center w-8 h-8 rounded border border-border bg-popover text-muted-foreground font-medium shrink-0'>
             {item.icon}
           </div>
           <div className='flex flex-col'>
-            <span className='text-sm font-medium text-zinc-900'>
+            <span className='text-sm font-medium text-foreground'>
               {item.label}
             </span>
-            <span className='text-xs text-zinc-500'>{item.desc}</span>
+            <span className='text-xs text-muted-foreground'>{item.desc}</span>
           </div>
         </button>
       ))}

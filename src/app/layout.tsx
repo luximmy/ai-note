@@ -4,6 +4,7 @@ import './globals.css';
 
 // 1. 引入 sonner 的全局 Toaster 组件
 import { Toaster } from 'sonner';
+import { ThemeProvider } from 'next-themes';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -29,16 +30,21 @@ export default function RootLayout({
     <html
       lang='zh-CN'
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      suppressHydrationWarning
     >
       <body className='min-h-full flex flex-col'>
-        {children}
-        {/* 2. 在 body 的最末尾挂载全局弹窗组件 */}
-        {/* 可以加上 richColors 让成功/失败的弹窗带有好看的背景色 */}
-        {/* position 控制弹窗出现的位置，比如右下角 */}
-        <Toaster
-          position='bottom-right'
-          richColors
-        />
+        <ThemeProvider
+          attribute='class'
+          defaultTheme='system'
+          enableSystem
+          disableTransitionOnChange
+        >
+          {children}
+          <Toaster
+            position='bottom-right'
+            richColors
+          />
+        </ThemeProvider>
       </body>
     </html>
   );

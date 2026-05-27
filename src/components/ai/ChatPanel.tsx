@@ -56,11 +56,11 @@ export function ChatPanel() {
   };
 
   return (
-    <div className='flex flex-col h-full bg-white overflow-hidden'>
+    <div className='flex flex-col h-full bg-background overflow-hidden'>
       <ScrollArea className='flex-1 min-h-0'>
         <div className='p-4'>
           {messages.length === 0 ? (
-            <div className='text-sm text-zinc-400 italic text-center mt-10'>
+            <div className='text-sm text-muted-foreground italic text-center mt-10'>
               有什么我可以帮你的？例如：“帮我总结这篇笔记”
             </div>
           ) : (
@@ -72,14 +72,14 @@ export function ChatPanel() {
                     m.role === 'user' ? 'items-end' : 'items-start'
                   }`}
                 >
-                  <div className='text-xs font-semibold text-zinc-500 mb-1.5'>
+                  <div className='text-xs font-semibold text-muted-foreground mb-1.5'>
                     {m.role === 'user' ? 'You' : '✨ AI Copilot'}
                   </div>
                   <div
                     className={`text-sm px-4 py-3 rounded-2xl max-w-[92%] min-w-0 grid leading-relaxed shadow-sm ${
                       m.role === 'user'
-                        ? 'bg-zinc-900 text-zinc-50 rounded-tr-sm'
-                        : 'bg-zinc-50 text-zinc-800 rounded-tl-sm border border-zinc-100'
+                        ? 'bg-primary text-primary-foreground rounded-tr-sm'
+                        : 'bg-muted text-foreground rounded-tl-sm border border-border'
                     }`}
                   >
                     {m.role === 'user' ? (
@@ -93,9 +93,9 @@ export function ChatPanel() {
                     ) : (
                       <div
                         className='markdown-content prose prose-sm prose-zinc w-full min-w-0 max-w-none wrap-break-word
-                        prose-headings:text-zinc-900 prose-headings:font-bold prose-headings:my-2
+                        prose-headings:text-foreground prose-headings:font-bold prose-headings:my-2
                         prose-p:my-1 prose-p:leading-relaxed
-                        prose-code:bg-zinc-200/50 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:before:content-none prose-code:after:content-none prose-code:wrap-break-word
+                        prose-code:bg-muted prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:before:content-none prose-code:after:content-none prose-code:wrap-break-word
                         prose-pre:bg-zinc-900 prose-pre:text-zinc-50 prose-pre:p-4 prose-pre:rounded-xl prose-pre:w-full prose-pre:max-w-full prose-pre:overflow-x-auto
                         prose-li:my-0.5 prose-ul:my-2
                         dark:prose-invert'
@@ -115,7 +115,7 @@ export function ChatPanel() {
                     <div className='flex items-center gap-2 mt-1.5 opacity-0 group-hover:opacity-100 transition-opacity'>
                       <Button
                         variant='ghost'
-                        className='h-6 px-2 text-[11px] text-zinc-400 hover:text-zinc-900 bg-zinc-100 hover:bg-zinc-200'
+                        className='h-6 px-2 text-[11px] text-muted-foreground hover:text-foreground bg-muted hover:bg-secondary'
                         onClick={() => {
                           const fullText = m.parts
                             .filter((p) => p.type === 'text')
@@ -247,21 +247,21 @@ export function ChatPanel() {
 
               {status === 'submitted' && !error && (
                 <div className='flex flex-col items-start'>
-                  <div className='text-xs font-semibold text-zinc-500 mb-1'>
+                  <div className='text-xs font-semibold text-muted-foreground mb-1'>
                     ✨ AI Copilot
                   </div>
-                  <div className='text-sm px-4 py-2.5 rounded-xl bg-zinc-100 text-zinc-500 flex items-center gap-3'>
+                  <div className='text-sm px-4 py-2.5 rounded-xl bg-muted text-muted-foreground flex items-center gap-3'>
                     <div className='flex gap-1.5'>
                       <span
-                        className='w-1.5 h-1.5 rounded-full bg-zinc-400 animate-bounce'
+                        className='w-1.5 h-1.5 rounded-full bg-muted-foreground animate-bounce'
                         style={{ animationDelay: '0ms' }}
                       />
                       <span
-                        className='w-1.5 h-1.5 rounded-full bg-zinc-400 animate-bounce'
+                        className='w-1.5 h-1.5 rounded-full bg-muted-foreground animate-bounce'
                         style={{ animationDelay: '150ms' }}
                       />
                       <span
-                        className='w-1.5 h-1.5 rounded-full bg-zinc-400 animate-bounce'
+                        className='w-1.5 h-1.5 rounded-full bg-muted-foreground animate-bounce'
                         style={{ animationDelay: '300ms' }}
                       />
                     </div>
@@ -277,13 +277,13 @@ export function ChatPanel() {
         </div>
       </ScrollArea>
 
-      <div className='p-4 border-t border-zinc-100 bg-white shrink-0'>
+      <div className='p-4 border-t border-border bg-background shrink-0'>
         <form
           onSubmit={onSubmit}
-          className={`flex items-end gap-2 bg-zinc-50 border p-1.5 rounded-xl transition-all ${
+          className={`flex items-end gap-2 bg-muted border p-1.5 rounded-xl transition-all ${
             error
               ? 'border-red-300 focus-within:ring-red-900/20'
-              : 'border-zinc-200 focus-within:ring-2 focus-within:ring-zinc-900/20'
+              : 'border-border focus-within:ring-2 focus-within:ring-ring/20'
           }`}
         >
           <textarea

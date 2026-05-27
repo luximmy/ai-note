@@ -51,7 +51,7 @@ function CodeBlockComponent({
         </div>
       )}
       {!isExecuting && (
-        <div className='text-zinc-500 text-xs mb-2 absolute top-2 right-2 uppercase'>
+        <div className='text-muted-foreground text-xs mb-2 absolute top-2 right-2 uppercase'>
           {language || 'plaintext'}
         </div>
       )}

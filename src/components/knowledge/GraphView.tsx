@@ -306,10 +306,10 @@ export function GraphView({ data }: GraphViewProps) {
 
   if (data.nodes.length === 0) {
     return (
-      <div className='flex items-center justify-center h-full min-h-[400px] border border-zinc-200 rounded-xl bg-white'>
+      <div className='flex items-center justify-center h-full min-h-[400px] border border-border rounded-xl bg-background'>
         <div className='text-center'>
-          <p className='text-zinc-400 text-sm'>暂无知识图谱数据</p>
-          <p className='text-zinc-300 text-xs mt-1'>创建更多笔记并使用 [[双链]] 来生成图谱</p>
+          <p className='text-muted-foreground text-sm'>暂无知识图谱数据</p>
+          <p className='text-muted-foreground/70 text-xs mt-1'>创建更多笔记并使用 [[双链]] 来生成图谱</p>
         </div>
       </div>
     );
@@ -322,7 +322,7 @@ export function GraphView({ data }: GraphViewProps) {
         role='img'
         aria-label='知识图谱 - 显示笔记之间的链接关系'
         tabIndex={0}
-        className='w-full h-full border border-zinc-200 rounded-xl bg-white cursor-grab active:cursor-grabbing'
+        className='w-full h-full border border-border rounded-xl bg-background cursor-grab active:cursor-grabbing'
       >
         <p>知识图谱：显示 {data.nodes.length} 篇笔记和 {data.edges.length} 条链接关系</p>
       </canvas>

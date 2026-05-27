@@ -37,7 +37,7 @@ function HeadingBlockComponent({
   }[level as 1 | 2 | 3];
 
   return (
-    <div className={`font-bold text-zinc-900 outline-none ${sizeClasses}`}>
+    <div className={`font-bold text-foreground outline-none ${sizeClasses}`}>
       {/* 3. 替换为动态的富文本编辑器，并接通 onInsert */}
       <RichTextEditor
         initialContent={block.content || ''}

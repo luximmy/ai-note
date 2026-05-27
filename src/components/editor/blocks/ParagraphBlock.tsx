@@ -31,7 +31,7 @@ function ParagraphBlockComponent({
   );
 
   return (
-    <div className='text-zinc-800 leading-relaxed group relative'>
+    <div className='text-foreground leading-relaxed group relative'>
       <RichTextEditor
         initialContent={block.content || ''}
         onUpdate={handleUpdate}
