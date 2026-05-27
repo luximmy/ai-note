@@ -24,7 +24,7 @@ export function CitationChip({ index, source }: CitationChipProps) {
         {index}
       </button>
       {showPopover && source && (
-        <div className='absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 w-64 p-3 bg-popover border border-border rounded-lg shadow-lg text-xs'>
+        <div className='absolute bottom-full right-0 mb-2 z-50 w-64 p-3 bg-popover border border-border rounded-lg shadow-lg text-xs'>
           <div className='font-semibold text-foreground mb-1'>
             {source.noteTitle}
           </div>

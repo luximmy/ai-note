@@ -9,28 +9,15 @@ import { useEffect, useRef, useState } from 'react';
 import { useAppStore, PendingInsert } from '@/store';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import rehypeRaw from 'rehype-raw';
 import { toast } from 'sonner';
 import { CitationChip } from './CitationChip';
 import { CitationSources } from './CitationSources';
 import type { SearchResultFragment } from '@/types';
 
-/** Split text by [N] citation markers into (string | {index: number})[] segments */
-function parseCitations(text: string): (string | { index: number })[] {
-  const parts: (string | { index: number })[] = [];
-  const regex = /\[(\d+)\]/g;
-  let lastIndex = 0;
-  let match;
-  while ((match = regex.exec(text)) !== null) {
-    if (match.index > lastIndex) {
-      parts.push(text.slice(lastIndex, match.index));
-    }
-    parts.push({ index: parseInt(match[1], 10) });
-    lastIndex = match.index + match[0].length;
-  }
-  if (lastIndex < text.length) {
-    parts.push(text.slice(lastIndex));
-  }
-  return parts;
+/** Replace [N] citation markers with inline <cite> HTML tags for ReactMarkdown */
+function injectCiteTags(text: string): string {
+  return text.replace(/\[(\d+)\]/g, '<cite data-index="$1">[$1]</cite>');
 }
 
 const markdownClasses = `markdown-content prose prose-sm prose-zinc w-full min-w-0 max-w-none wrap-break-word
@@ -132,30 +119,32 @@ export function ChatPanel() {
                         .map((part) => ('text' in part ? part.text : ''))
                         .join('');
 
-                      const segments = parseCitations(rawText);
+                      // Only show citations footer when AI actually used [N] markers
+                      const hasCitations = /\[\d+\]/.test(rawText);
+                      const textWithCiteTags = injectCiteTags(rawText);
 
                       return (
                         <>
                           <div className={markdownClasses}>
-                            {segments.map((seg, i) => {
-                              if (typeof seg === 'string') {
-                                return (
-                                  <ReactMarkdown key={i} remarkPlugins={[remarkGfm]}>
-                                    {seg}
-                                  </ReactMarkdown>
-                                );
-                              }
-                              const source = sources[seg.index - 1];
-                              return (
-                                <CitationChip
-                                  key={`cite-${i}`}
-                                  index={seg.index}
-                                  source={source}
-                                />
-                              );
-                            })}
+                            <ReactMarkdown
+                              remarkPlugins={[remarkGfm]}
+                              rehypePlugins={[rehypeRaw]}
+                              components={{
+                                cite: ({ node }) => {
+                                  const index = Number(
+                                    (node?.properties?.dataIndex as string) ?? 0,
+                                  );
+                                  const source = sources[index - 1];
+                                  return (
+                                    <CitationChip index={index} source={source} />
+                                  );
+                                },
+                              }}
+                            >
+                              {textWithCiteTags}
+                            </ReactMarkdown>
                           </div>
-                          {sources.length > 0 && (
+                          {hasCitations && sources.length > 0 && (
                             <CitationSources sources={sources} />
                           )}
                         </>
