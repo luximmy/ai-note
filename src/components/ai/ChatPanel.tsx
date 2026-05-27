@@ -81,7 +81,12 @@ export function ChatPanel() {
             </div>
           ) : (
             <div className='space-y-6 pb-4'>
-              {messages.map((m) => (
+              {messages.map((m) => {
+                // Hide assistant messages that have no text content yet (prevents empty bubble during streaming)
+                const hasText = m.parts?.some((p) => p.type === 'text' && 'text' in p && p.text);
+                if (m.role !== 'user' && !hasText) return null;
+
+                return (
                 <div
                   key={m.id}
                   className={`group flex flex-col w-full min-w-0 ${
@@ -119,8 +124,12 @@ export function ChatPanel() {
                         .map((part) => ('text' in part ? part.text : ''))
                         .join('');
 
-                      // Only show citations footer when AI actually used [N] markers
-                      const hasCitations = /\[\d+\]/.test(rawText);
+                      // Extract citation indices actually used in the text
+                      const citedIndices = new Set(
+                        [...rawText.matchAll(/\[(\d+)\]/g)].map((m) => parseInt(m[1], 10)),
+                      );
+                      const hasCitations = citedIndices.size > 0;
+                      const citedSources = sources.filter((_, i) => citedIndices.has(i + 1));
                       const textWithCiteTags = injectCiteTags(rawText);
 
                       return (
@@ -144,8 +153,8 @@ export function ChatPanel() {
                               {textWithCiteTags}
                             </ReactMarkdown>
                           </div>
-                          {hasCitations && sources.length > 0 && (
-                            <CitationSources sources={sources} />
+                          {hasCitations && citedSources.length > 0 && (
+                            <CitationSources sources={citedSources} />
                           )}
                         </>
                       );
@@ -268,7 +277,7 @@ export function ChatPanel() {
                     </div>
                   )}
                 </div>
-              ))}
+              )})}
 
               {/* ✨ 4. 渲染错误兜底 UI 与重试按钮 */}
               {error && (
