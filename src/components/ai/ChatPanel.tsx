@@ -9,8 +9,37 @@ import { useEffect, useRef, useState } from 'react';
 import { useAppStore, PendingInsert } from '@/store';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-// ✨ 1. 引入 toast 用于错误提示
 import { toast } from 'sonner';
+import { CitationChip } from './CitationChip';
+import { CitationSources } from './CitationSources';
+import type { SearchResultFragment } from '@/types';
+
+/** Split text by [N] citation markers into (string | {index: number})[] segments */
+function parseCitations(text: string): (string | { index: number })[] {
+  const parts: (string | { index: number })[] = [];
+  const regex = /\[(\d+)\]/g;
+  let lastIndex = 0;
+  let match;
+  while ((match = regex.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push(text.slice(lastIndex, match.index));
+    }
+    parts.push({ index: parseInt(match[1], 10) });
+    lastIndex = match.index + match[0].length;
+  }
+  if (lastIndex < text.length) {
+    parts.push(text.slice(lastIndex));
+  }
+  return parts;
+}
+
+const markdownClasses = `markdown-content prose prose-sm prose-zinc w-full min-w-0 max-w-none wrap-break-word
+  prose-headings:text-foreground prose-headings:font-bold prose-headings:my-2
+  prose-p:my-1 prose-p:leading-relaxed
+  prose-code:bg-muted prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:before:content-none prose-code:after:content-none prose-code:wrap-break-word
+  prose-pre:bg-zinc-900 prose-pre:text-zinc-50 prose-pre:p-4 prose-pre:rounded-xl prose-pre:w-full prose-pre:max-w-full prose-pre:overflow-x-auto
+  prose-li:my-0.5 prose-ul:my-2
+  dark:prose-invert`;
 
 export function ChatPanel() {
   const [input, setInput] = useState('');
@@ -90,24 +119,48 @@ export function ChatPanel() {
                           return null;
                         })}
                       </div>
-                    ) : (
-                      <div
-                        className='markdown-content prose prose-sm prose-zinc w-full min-w-0 max-w-none wrap-break-word
-                        prose-headings:text-foreground prose-headings:font-bold prose-headings:my-2
-                        prose-p:my-1 prose-p:leading-relaxed
-                        prose-code:bg-muted prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:before:content-none prose-code:after:content-none prose-code:wrap-break-word
-                        prose-pre:bg-zinc-900 prose-pre:text-zinc-50 prose-pre:p-4 prose-pre:rounded-xl prose-pre:w-full prose-pre:max-w-full prose-pre:overflow-x-auto
-                        prose-li:my-0.5 prose-ul:my-2
-                        dark:prose-invert'
-                      >
-                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                          {m.parts
-                            .filter((part) => part.type === 'text')
-                            .map((part) => ('text' in part ? part.text : ''))
-                            .join('')}
-                        </ReactMarkdown>
-                      </div>
-                    )}
+                    ) : (() => {
+                      // Extract citations from data parts
+                      const citationsPart = m.parts?.find(
+                        (p): p is { type: 'data-citations'; data: SearchResultFragment[] } =>
+                          p.type === 'data-citations',
+                      );
+                      const sources: SearchResultFragment[] = citationsPart?.data ?? [];
+
+                      const rawText = m.parts
+                        .filter((part) => part.type === 'text')
+                        .map((part) => ('text' in part ? part.text : ''))
+                        .join('');
+
+                      const segments = parseCitations(rawText);
+
+                      return (
+                        <>
+                          <div className={markdownClasses}>
+                            {segments.map((seg, i) => {
+                              if (typeof seg === 'string') {
+                                return (
+                                  <ReactMarkdown key={i} remarkPlugins={[remarkGfm]}>
+                                    {seg}
+                                  </ReactMarkdown>
+                                );
+                              }
+                              const source = sources[seg.index - 1];
+                              return (
+                                <CitationChip
+                                  key={`cite-${i}`}
+                                  index={seg.index}
+                                  source={source}
+                                />
+                              );
+                            })}
+                          </div>
+                          {sources.length > 0 && (
+                            <CitationSources sources={sources} />
+                          )}
+                        </>
+                      );
+                    })()}
                   </div>
 
                   {/* ...保留原有的插入到画布的按钮逻辑... */}

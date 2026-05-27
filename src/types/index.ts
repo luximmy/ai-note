@@ -106,6 +106,7 @@ export interface Document {
 // 6. 用于 RAG 的上下文片段接口 (用于和向量数据库通信)
 export interface SearchResultFragment {
   blockId: string; // 精确到 Block 级别的召回
+  noteId: string; // 所属文档 ID，用于跳转
   score: number; // 向量搜索相似度分值
   content: string; // Block 的文本内容
   noteTitle: string; // 所属文档标题

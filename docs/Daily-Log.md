@@ -1,5 +1,50 @@
 # 2026-05-27 工作日志
 
+## RAG 检索增强 + Citations 引用溯源 ✅
+
+**目标**：实现跨笔记 RAG 检索，AI 回答附带可点击的引用来源标记。
+
+**实现内容**：
+
+1. **`src/lib/retrieval.ts`（新建）**
+   - `tokenize(text)` — 中文逐字切分 + 英文按空格切分，去 wikilink 语法
+   - `scoreBlock(queryTokens, blockTokens, idf)` — TF-IDF 评分
+   - `keywordSearch(query, documents, topK)` — 跨所有文档检索相关区块，返回 `SearchResultFragment[]`
+   - `simulateNetwork(200, 0)` — 200ms 延迟，0% 失败率
+   - Edge Runtime 兼容：仅使用 RegExp、Map、Math.log
+
+2. **`src/app/api/chat/route.ts`（修改）**
+   - 从最后一条用户消息提取检索 query
+   - 调用 `keywordSearch` 获取跨笔记相关区块
+   - System prompt 追加「检索到的相关知识片段」+「引用规则」
+   - `createUIMessageStream` 替代 `toUIMessageStreamResponse`，注入 `data-citations` part
+
+3. **`src/components/ai/CitationChip.tsx`（新建）**
+   - 内联引用标记：小圆形上标按钮，`bg-primary/10 text-primary`
+   - Hover/Click popover 显示来源笔记标题 + 内容预览
+   - `source === undefined` 时仅显示数字（处理模型幻觉编号）
+
+4. **`src/components/ai/CitationSources.tsx`（新建）**
+   - 底部来源卡片列表：编号圆标 + 笔记标题 + 内容预览
+   - 点击跳转到源笔记 `/app/note/${noteId}`
+
+5. **`src/components/ai/ChatPanel.tsx`（修改）**
+   - `parseCitations(text)` 正则 `/\[(\d+)\]/g` 拆分文本为 `(string | {index})[]` 片段
+   - 提取 `data-citations` part 中的 sources
+   - 交替渲染 ReactMarkdown 片段和 CitationChip 组件
+   - 消息底部渲染 CitationSources
+
+6. **`src/types/index.ts`（修改）**
+   - `SearchResultFragment` 新增 `noteId: string` 字段
+
+**技术决策**：
+- TF-IDF 而非向量搜索：Mock-First 策略，5 文档 21 区块规模下关键词搜索足够演示
+- `createUIMessageStream` + `data-citations` 自定义 part：citations 按消息存储在 parts 中，无需全局状态
+- 流式体验：文本流式到达时 `[N]` 作为纯文本显示，流结束后 citations part 到达触发重渲染变为可交互 chip
+- `simulateNetwork(200, 0)`：检索添加 200ms 延迟模拟真实向量库，但不随机失败（检索应稳定可靠）
+
+---
+
 ## 暗色模式全量实现 ✅
 
 **目标**：为项目实现完整的暗色模式支持，包括主题切换 UI 和全量颜色迁移。
