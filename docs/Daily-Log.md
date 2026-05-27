@@ -46,6 +46,37 @@
 - `caretRangeFromPoint` + TreeWalker 检测点击：绕过 ProseMirror `posAtCoords` 在 inline decoration 下的坐标偏移问题
 - Auto-fit 在 simulation `end` 事件中执行一次：避免在 tick 过程中持续调整 viewport 导致抽动
 
+**踩坑记录**：
+
+1. **ProseMirror `posAtCoords` 在 inline decoration 下的坐标偏移**
+   - 现象：wikilink 高亮正常显示，但点击时 `posAtCoords` 返回的位置与实际点击字符不一致，导致偏移检测失败
+   - 原因：ProseMirror 的 `posAtCoords` 基于文档模型坐标，但 inline decoration 不占文档位置，导致坐标映射出现偏差
+   - 解决：放弃 `posAtCoords`，改用浏览器原生 `document.caretRangeFromPoint(event.clientX, event.clientY)` 获取点击处的 DOM 文本节点 + 偏移量，再通过 TreeWalker 向上遍历找 `.wikilink` 祖先元素，最后用字符偏移验证是否落在 `[[...]]` 范围内
+
+2. **ProseMirror 插件注册时机与 React 渲染冲突**
+   - 现象：在组件 render 阶段直接调用 `editor.registerPlugin()` 时报错或行为异常
+   - 原因：Tiptap 的 Editor 实例在 React reconciler 完成前就初始化完毕，render 阶段注册插件会与 React 的调度冲突
+   - 解决：用 `requestAnimationFrame` 包裹 `registerPlugin` 调用，将注册推迟到浏览器下一帧（React 渲染完成后）
+
+3. **D3 force 图谱 auto-fit 导致视觉抽动**
+   - 现象：图谱渲染时画面先在原点附近闪烁，再突然跳到正确位置
+   - 原因：最初在每个 `tick` 事件中都重新计算包围盒并调整 viewport，但 simulation 早期节点位置剧烈变化，导致 viewport 不断跳动
+   - 解决：只在 simulation `end` 事件中执行一次 auto-fit（计算所有节点的包围盒 → 算出合适的 scale 和 offset → 重绘），用 `finalFitDone` 标志防止重复执行
+
+4. **Canvas 高 DPI 屏幕模糊**
+   - 现象：Canvas 在 Retina/高分屏上渲染模糊
+   - 原因：Canvas 的物理像素与 CSS 像素 1:1 对应，但高 DPI 屏幕的物理像素是 CSS 像素的 2-3 倍
+   - 解决：读取 `window.devicePixelRatio`，将 `canvas.width/height` 设为 `容器宽高 × dpr`，再用 `canvas.style.width/height` 保持 CSS 尺寸不变，绘制时 `ctx.setTransform(dpr, 0, 0, dpr, 0, 0)` 做缩放补偿
+
+5. **Canvas 拖拽平移与节点点击冲突**
+   - 现象：想点击节点跳转时，微小的鼠标抖动被识别为拖拽，导致跳转失败
+   - 解决：维护 `pointerMoved` 标志，在 `pointermove` 中检测位移超过 3px 才置为 true；`pointerup` 时只有 `pointerMoved === false` 才判定为点击，执行节点命中检测（坐标反变换 → 遍历节点 → 距离平方 < 半径平方）
+
+6. **全局正则 `lastIndex` 状态残留**
+   - 现象：wikilink 匹配偶数次正常，奇数次漏匹配
+   - 原因：`/\[\[([^\]]+)\]\]/g` 是全局正则，`exec()` 会推进 `lastIndex`，下次调用从上次结束位置继续。如果不手动重置，循环外的二次调用会跳过开头
+   - 解决：每次 `exec` 前手动 `WIKILINK_REGEX.lastIndex = 0`
+
 ---
 
 # 2026-05-15 工作日志
