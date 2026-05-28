@@ -75,6 +75,22 @@
 - Fire-and-forget embedding：区块保存时不阻塞（200-500ms API 调用），失败下次启动 backfill 重试
 - `cosineSimilarity` from `ai` SDK 要求 `number[]` 而非 `Float32Array`，自行实现 `cosine()` 更简洁
 
+## 种子数据扩充 + 项目文档补全 ✅
+
+**目标**：丰富数据库笔记内容，补全缺失的项目文档。
+
+**实现内容**：
+
+1. **`src/db/seed-data.ts`（改写）** — 种子数据从 5 篇扩充到 9 篇，区块从 21 增加到 60+。新增笔记：TypeScript 高级类型体操、语义向量检索原理与实践、SQLite 数据库架构、暗色模式实现笔记。现有笔记大幅扩充内容（更多段落、代码示例、wikilink 交叉引用）。
+2. **`docs/Database-Architecture.md`（新建）** — SQLite + Drizzle ORM 架构文档（表结构、连接管理、数据访问层、Seed 机制）
+3. **`docs/AI-RAG-Architecture.md`（新建）** — AI 与 RAG 架构文档（聊天链路、局部重写、语义检索、embedding 流程、增量更新策略）
+4. **`docs/Development-Guide.md`（新建）** — 开发指南（环境准备、项目结构、常用命令、测试、数据库管理、部署、常见问题）
+5. **`docs/API-Reference.md`（新建）** — API 参考（7 个 Server Actions、2 个 API Routes、数据访问层函数签名）
+
+**技术决策**：
+- 种子数据覆盖项目所有技术要点（架构、状态管理、容灾、TypeScript、RAG、数据库、暗色模式），通过 wikilink 互相引用形成丰富的知识图谱
+- 文档按职责分离：Database（数据层）、AI-RAG（AI 能力线）、Development（开发流程）、API（接口参考）
+
 ---
 
 # 2026-05-27 工作日志

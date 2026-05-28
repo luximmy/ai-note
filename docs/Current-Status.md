@@ -56,6 +56,7 @@
 - [x] **真实数据层完成（任务 6.1）**：Mock 数据全面替换为 SQLite + Drizzle ORM 持久化。新建 `src/db/` 数据层（schema.ts 表定义 + index.ts 连接单例 + queries.ts 数据访问层 + seed.ts 幂等填充）；7 个 Server Actions 改写为调用 DB 查询（删除 `simulateNetwork` 假延迟/失败）；`/api/chat` 移除 Edge Runtime 改用 Node.js 以支持 better-sqlite3；`layout.tsx` 拆为 Server Component（DB 查询）+ `AppShell.tsx` Client Component；`BlockRenderer` 接受 `documents` prop 替代 mock 硬编码；`retrieval.ts` 删除 mock 延迟；tiptap 全家桶升级至 3.23.6 修复版本冲突；build + 22 tests 全部通过。
 - [x] **段落持久化修复**：`RichTextEditor` 保存时 `getText()` → `getHTML()` 保留 `<p>` 标签；加载时 `ensureHtml()` 将旧纯文本自动转为 HTML 段落（向后兼容）；AI rewrite 流式阶段逐块 `insertContent` 保持实时反馈，流结束后替换为正确 `<p>` HTML；新建 `strip-html.ts` 工具函数（`stripHtml` + `ensureHtml`），AI 上下文注入、RAG 分词、wikilink 解析均用 `stripHtml` 清理 HTML。
 - [x] **语义向量检索完成（任务 7.1）**：TF-IDF 关键词匹配替换为 Qwen3 Embedding 语义搜索。新建 `src/lib/embedding.ts`（DashScope embedding 客户端）+ `src/lib/embedding-store.ts`（SQLite BLOB 向量存储 + 余弦相似度 + 启动 backfill + 语义搜索）；`retrieval.ts` 改为 `searchNotes` 调用语义搜索；`queries.ts` 挂载 embedding 到 update/add/delete 路径（fire-and-forget）；chat route 删除全量加载改为直接语义搜索；`DndContext` 添加稳定 id 修复 SSR hydration mismatch。build + 22 tests 全部通过。
+- [x] **种子数据扩充 + 项目文档补全**：种子数据从 5 篇扩充到 9 篇（60+ 区块），新增 TypeScript 类型体操、语义向量检索、SQLite 架构、暗色模式 4 篇笔记，现有笔记大幅扩充内容与 wikilink 交叉引用。新建 4 篇项目文档：Database-Architecture.md、AI-RAG-Architecture.md、Development-Guide.md、API-Reference.md。
 
 ## 3. 进行中的任务 (In Progress)
 
