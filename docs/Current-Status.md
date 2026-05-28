@@ -54,6 +54,7 @@
 - [x] **暗色模式全量实现完成**：安装 `next-themes` + `ThemeProvider`（`attribute="class"` + `defaultTheme="system"`）；创建 `ThemeToggle` 组件（亮色/暗色/跟随系统三级切换）；21 个文件 43 处硬编码颜色迁移为 shadcn 语义化 token（`bg-background`、`text-foreground`、`bg-muted`、`text-muted-foreground`、`bg-primary`、`border-border` 等）；CodeBlock 保留深色不变（有意设计）；测试 + lint 零错误。
 - [x] **RAG 检索增强 + Citations 引用溯源完成（任务 5.1）**：`src/lib/retrieval.ts` 实现 TF-IDF 关键词检索引擎（中英文分词 + TF-IDF 评分 + Edge Runtime 兼容）；`/api/chat` 接入 RAG —— 提取用户 query 跨所有笔记检索相关区块，构建带编号的「检索到的相关知识片段」注入 system prompt，要求模型使用 `[N]` 引用标记；`createUIMessageStream` 注入 `data-citations` 自定义数据 part 到流式响应；`CitationChip` 内联引用标记组件（hover popover 显示来源预览）；`CitationSources` 底部来源卡片列表（可跳转源笔记）；`ChatPanel` 解析 `[N]` 标记交替渲染 ReactMarkdown 和 CitationChip；`SearchResultFragment` 类型扩展 `noteId` 字段；测试 + lint 零错误。
 - [x] **真实数据层完成（任务 6.1）**：Mock 数据全面替换为 SQLite + Drizzle ORM 持久化。新建 `src/db/` 数据层（schema.ts 表定义 + index.ts 连接单例 + queries.ts 数据访问层 + seed.ts 幂等填充）；7 个 Server Actions 改写为调用 DB 查询（删除 `simulateNetwork` 假延迟/失败）；`/api/chat` 移除 Edge Runtime 改用 Node.js 以支持 better-sqlite3；`layout.tsx` 拆为 Server Component（DB 查询）+ `AppShell.tsx` Client Component；`BlockRenderer` 接受 `documents` prop 替代 mock 硬编码；`retrieval.ts` 删除 mock 延迟；tiptap 全家桶升级至 3.23.6 修复版本冲突；build + 22 tests 全部通过。
+- [x] **段落持久化修复**：`RichTextEditor` 保存时 `getText()` → `getHTML()` 保留 `<p>` 标签；加载时 `ensureHtml()` 将旧纯文本自动转为 HTML 段落（向后兼容）；AI rewrite 流式阶段逐块 `insertContent` 保持实时反馈，流结束后替换为正确 `<p>` HTML；新建 `strip-html.ts` 工具函数（`stripHtml` + `ensureHtml`），AI 上下文注入、RAG 分词、wikilink 解析均用 `stripHtml` 清理 HTML。
 
 ## 3. 进行中的任务 (In Progress)
 

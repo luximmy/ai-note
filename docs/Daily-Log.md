@@ -28,6 +28,30 @@
 - globalThis 单例模式：防止 Next.js build 时 10 个 worker 各自打开数据库导致 SQLITE_BUSY
 - backlinks 不存储：保持运行时 wikilink 扫描计算，避免数据冗余同步问题
 
+## 修复段落持久化 bug ✅
+
+**目标**：修复切换笔记后段落分隔消失、内容挤成一段的问题。
+
+**实现内容**：
+
+1. **`src/components/editor/RichTextEditor.tsx`（改写）**
+   - 保存时 `editor.getText()` → `editor.getHTML()`：保留 `<p>` 标签，段落结构不再丢失
+   - 加载时 `ensureHtml(initialContent)`：旧纯文本数据自动转为 HTML 段落（向后兼容）
+   - AI rewrite 流式阶段：逐块 `insertContent` 保持实时反馈，流结束后用 `deleteRange` + `insertContentAt` 替换为正确 `<p>` HTML
+
+2. **`src/lib/strip-html.ts`（新建）**
+   - `stripHtml(html)` — HTML 转纯文本，用于 AI 上下文注入和 RAG 分词
+   - `ensureHtml(content)` — 纯文本转 HTML 段落，用于加载时向后兼容
+
+3. **`src/components/editor/BlockRenderer.tsx`（改写）** — AI 上下文注入用 `stripHtml()` 清理 HTML 标签
+4. **`src/lib/retrieval.ts`（改写）** — RAG 分词前用 `stripHtml()` 清理
+5. **`src/actions/note.ts`（改写）** — wikilink 解析和反向链接预览用 `stripHtml()` 清理
+
+**技术决策**：
+- `getHTML()` 而非 `getText()`：Tiptap 的 `getText()` 丢弃所有 HTML 结构，`getHTML()` 保留 `<p>` 标签
+- `ensureHtml` 向后兼容：检测内容是否已有 HTML 标签，纯文本则按双换行拆分为 `<p>` 段落
+- rewrite 流式 + 最终清理：流式阶段用 `<br>` 保持实时反馈，结束后替换为 `<p>` 段落确保持久化正确
+
 ---
 
 # 2026-05-27 工作日志

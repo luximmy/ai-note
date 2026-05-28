@@ -7,6 +7,7 @@ import {
   resolveWikilinkTitle,
   extractContext,
 } from '@/lib/wikilink-parser';
+import { stripHtml } from '@/lib/strip-html';
 import {
   getDocumentById as getDocFromDb,
   getAllDocumentsWithBlocks,
@@ -90,7 +91,8 @@ export async function getGraphData(): Promise<GraphData> {
   for (const doc of allDocs) {
     for (const block of doc.blocks) {
       if (!block.content) continue;
-      const titles = parseWikilinks(block.content);
+      const plainContent = stripHtml(block.content);
+      const titles = parseWikilinks(plainContent);
       for (const title of titles) {
         const targetId = resolveWikilinkTitle(title, allDocs);
         if (targetId) {
@@ -122,9 +124,10 @@ export async function getBacklinksForNote(noteId: string): Promise<Wikilink[]> {
     if (doc.id === noteId) continue;
     for (const block of doc.blocks) {
       if (!block.content) continue;
+      const plainContent = stripHtml(block.content);
       const regex = /\[\[([^\]]+)\]\]/g;
       let match: RegExpExecArray | null;
-      while ((match = regex.exec(block.content)) !== null) {
+      while ((match = regex.exec(plainContent)) !== null) {
         if (match[1].trim() === targetDoc.title) {
           backlinks.push({
             sourceId: doc.id,
@@ -133,7 +136,7 @@ export async function getBacklinksForNote(noteId: string): Promise<Wikilink[]> {
             sourceTitle: doc.title,
             sourceEmoji: doc.emoji,
             contextPreview: extractContext(
-              block.content,
+              plainContent,
               match.index,
               match[0].length,
             ),

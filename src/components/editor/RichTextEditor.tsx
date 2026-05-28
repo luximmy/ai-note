@@ -11,6 +11,7 @@ import { RewriteToolbar } from './RewriteToolbar';
 import { registerWikilinkPlugin } from './extensions/wikilink-decoration';
 import { useAppStore } from '@/store';
 import { toast } from 'sonner';
+import { ensureHtml } from '@/lib/strip-html';
 
 interface RichTextEditorProps {
   initialContent: string;
@@ -121,7 +122,7 @@ export function RichTextEditor({
         });
       }, 300); // 300ms 是一个非常舒适的停留唤出时间
     },
-    content: initialContent,
+    content: ensureHtml(initialContent),
     editorProps: {
       attributes: {
         class: 'focus:outline-none min-h-[1.5em] w-full',
@@ -134,7 +135,7 @@ export function RichTextEditor({
         compositionend: () => {
           isComposingRef.current = false;
           setTimeout(() => {
-            if (editor) onUpdateRef.current(editor.getText());
+            if (editor) onUpdateRef.current(editor.getHTML());
           }, 0);
           return false;
         },
@@ -191,7 +192,7 @@ export function RichTextEditor({
     },
     onUpdate: ({ editor }) => {
       if (isComposingRef.current) return;
-      onUpdateRef.current(editor.getText());
+      onUpdateRef.current(editor.getHTML());
     },
   });
 
@@ -257,6 +258,13 @@ export function RichTextEditor({
       if (!reader) return;
 
       let isFirstChunk = true;
+      let fullText = '';
+
+      const toHtml = (text: string) =>
+        text
+          .split(/\n{2,}/)
+          .map((p) => `<p>${p.replace(/\n/g, '<br>')}</p>`)
+          .join('');
 
       while (true) {
         const { done, value } = await reader.read();
@@ -265,6 +273,8 @@ export function RichTextEditor({
         const chunk = decoder.decode(value, { stream: true });
         if (!chunk) continue;
 
+        fullText += chunk;
+
         // ✨ 核心逻辑：只有收到真正的第一波数据时，才删除旧文字
         if (isFirstChunk) {
           editor.chain().focus().deleteRange({ from, to }).run();
@@ -272,10 +282,21 @@ export function RichTextEditor({
           isFirstChunk = false;
         }
 
-        editor.commands.insertContent(chunk);
+        // 流式阶段：逐块插入，换行用 <br>（保持实时反馈）
+        const displayHtml = chunk.replace(/\n/g, '<br>');
+        editor.chain().focus().insertContent(displayHtml).run();
       }
 
-      onUpdateRef.current(editor.getText());
+      // 流结束后：用正确 <p> 段落替换已插入的内容
+      if (fullText) {
+        const endPos = editor.state.doc.content.size;
+        editor.chain()
+          .focus()
+          .deleteRange({ from, to: endPos })
+          .insertContentAt(from, toHtml(fullText))
+          .run();
+      }
+      onUpdateRef.current(editor.getHTML());
       toast.success('改写完成 ✨');
     } catch (err) {
       console.error(err);

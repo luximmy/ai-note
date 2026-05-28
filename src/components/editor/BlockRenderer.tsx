@@ -22,6 +22,7 @@ import { GenerativeUIBlock } from './blocks/GenerativeUIBlock';
 import { SlashMenuItem } from './SlashMenu';
 import { emitSaveEvent } from '@/lib/telemetry';
 import { useAppStore } from '@/store';
+import { stripHtml } from '@/lib/strip-html';
 
 // 引入拖拽依赖
 import {
@@ -102,13 +103,14 @@ export function BlockRenderer({
   useEffect(() => {
     const contextText = blocks
       .map((b) => {
+        const text = stripHtml(b.content || '');
         if (b.type === 'todo')
-          return `[${b.attributes?.checked ? 'x' : ' '}] ${b.content || ''}`;
+          return `[${b.attributes?.checked ? 'x' : ' '}] ${text}`;
         if (b.type === 'heading')
-          return `${'#'.repeat(b.attributes?.level || 1)} ${b.content || ''}`;
+          return `${'#'.repeat(b.attributes?.level || 1)} ${text}`;
         if (b.type === 'code')
-          return `\`\`\`${b.attributes?.language || ''}\n${b.content || ''}\n\`\`\``;
-        return b.content || '';
+          return `\`\`\`${b.attributes?.language || ''}\n${text}\n\`\`\``;
+        return text;
       })
       .filter(Boolean)
       .join('\n\n');

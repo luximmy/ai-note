@@ -3,6 +3,7 @@
 // Lightweight, stateless per request.
 
 import { Document, SearchResultFragment } from '@/types';
+import { stripHtml } from './strip-html';
 
 /**
  * Tokenize text into searchable terms.
@@ -12,7 +13,7 @@ import { Document, SearchResultFragment } from '@/types';
 function tokenize(text: string): string[] {
   if (!text) return [];
 
-  const cleaned = text.replace(/\[\[([^\]]+)\]\]/g, '$1');
+  const cleaned = stripHtml(text).replace(/\[\[([^\]]+)\]\]/g, '$1');
   const tokens: string[] = [];
   const re = /[一-鿿]|[a-zA-Z0-9]+/g;
   let match;
