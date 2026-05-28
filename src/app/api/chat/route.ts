@@ -6,10 +6,9 @@ import {
   createUIMessageStream,
   createUIMessageStreamResponse,
 } from 'ai';
-import { mockDocuments } from '@/mock/data';
 import { keywordSearch } from '@/lib/retrieval';
+import { getAllDocumentsWithBlocks } from '@/db/queries';
 
-export const runtime = 'edge';
 export const maxDuration = 30;
 
 const deepseek = createOpenAI({
@@ -31,7 +30,8 @@ export async function POST(req: Request) {
         .map((p: { text: string }) => p.text)
         .join(' ') || '';
 
-    const sources = await keywordSearch(query, mockDocuments, 5);
+    const allDocs = await getAllDocumentsWithBlocks();
+    const sources = await keywordSearch(query, allDocs, 5);
 
     // 2. Build sources context for the system prompt
     const sourcesContext =

@@ -72,7 +72,7 @@ function createWikilinkPlugin(
 
         // Walk up from caret container to find .wikilink ancestor
         let wikilinkEl: HTMLElement | null = null;
-        let domNode: Node | null = caret.startContainer;
+        let domNode: globalThis.Node | null = caret.startContainer;
         while (domNode) {
           if (domNode instanceof HTMLElement && domNode.classList.contains('wikilink')) {
             wikilinkEl = domNode;

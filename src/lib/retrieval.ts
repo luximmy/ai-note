@@ -1,6 +1,6 @@
 // src/lib/retrieval.ts
-// Mock TF-IDF keyword search engine for RAG retrieval.
-// Lightweight, Edge Runtime compatible, stateless per request.
+// TF-IDF keyword search engine for RAG retrieval.
+// Lightweight, stateless per request.
 
 import { Document, SearchResultFragment } from '@/types';
 
@@ -58,9 +58,6 @@ export async function keywordSearch(
   documents: Document[],
   topK: number = 5,
 ): Promise<SearchResultFragment[]> {
-  // Simulate network latency (200ms, 0% failure — search should not randomly fail)
-  await new Promise((r) => setTimeout(r, 200));
-
   const queryTokens = tokenize(query);
   if (queryTokens.length === 0) return [];
 

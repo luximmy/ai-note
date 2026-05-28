@@ -1,3 +1,35 @@
+# 2026-05-28 工作日志
+
+## 真实数据层：Mock → SQLite + Drizzle ORM ✅
+
+**目标**：将硬编码 Mock 数据替换为 SQLite 文件数据库，实现笔记数据真正持久化。
+
+**实现内容**：
+
+1. **`src/db/schema.ts`（新建）** — Drizzle ORM 表定义，`documents` + `blocks` 两张表，blocks 通过 `document_id` 外键关联，`position` 字段保证排序，`attributes` 以 JSON 文本存储多态字段
+2. **`src/db/index.ts`（新建）** — 数据库连接单例（globalThis 防止 Next.js build 多 worker 重复连接），WAL 模式 + busy_timeout，自动建表 + 懒 seed
+3. **`src/db/queries.ts`（新建）** — 核心数据访问层，7 个函数：`getAllDocumentsMeta`、`getDocumentById`、`getAllDocumentsWithBlocks`、`updateBlock`、`addBlock`、`deleteBlock`、`reorderBlocks`；内部 `dbRowToBlock` 根据 type 列反序列化 attributes 构造正确的 Block 联合类型
+4. **`src/db/seed.ts`（新建）** — 幂等 seed 脚本，检查 documents 表有数据则跳过，事务保证原子性
+5. **`src/db/seed-data.ts`（从 mock/data.ts 迁移）** — 种子数据保留，仅 seed 脚本引用
+6. **`src/actions/note.ts`（改写）** — 删除 `mockDocuments` import 和 `simulateNetwork()` 假延迟/失败，每个函数改为调用 `@/db/queries`
+7. **`src/app/api/chat/route.ts`（改写）** — 删除 `export const runtime = 'edge'`（better-sqlite3 不兼容 Edge），改用 `getAllDocumentsWithBlocks()` 获取数据传给 `keywordSearch`
+8. **`src/app/app/layout.tsx`（改写）** — 从 `'use client'` 改为 Server Component，调用 `getAllDocumentsMeta()` 获取文档列表传给 AppShell
+9. **`src/components/layout/AppShell.tsx`（新建）** — 从 layout 拆出的 Client Component，接收 `documents` prop
+10. **`src/components/editor/BlockRenderer.tsx`（改写）** — 删除 mock import，新增 `documents` prop，note page 传入 `getAllDocumentsMeta()` 结果
+11. **`src/app/app/note/[id]/page.tsx`（改写）** — 新增 `getAllDocumentsMeta()` 调用，传 `documents` 给 BlockRenderer
+12. **`src/lib/retrieval.ts`（改写）** — 删除 200ms mock 延迟
+13. **`src/components/editor/extensions/wikilink-decoration.ts`（修复）** — `Node` 类型冲突改为 `globalThis.Node`
+14. **tiptap 全家桶升级至 3.23.6** — 修复已有的 core/starter-kit 版本不匹配
+
+**技术决策**：
+- 选择 SQLite + Drizzle ORM：零基础设施依赖，文件数据库，Drizzle 轻量且类型安全
+- better-sqlite3 优于 libsql：同步 API 性能最优，Node.js 原生支持
+- 移除 Edge Runtime：better-sqlite3 需要 Node.js 原生模块，DeepSeek API 调用才是延迟瓶颈，Edge 收益可忽略
+- globalThis 单例模式：防止 Next.js build 时 10 个 worker 各自打开数据库导致 SQLITE_BUSY
+- backlinks 不存储：保持运行时 wikilink 扫描计算，避免数据冗余同步问题
+
+---
+
 # 2026-05-27 工作日志
 
 ## RAG 检索增强 + Citations 引用溯源 ✅

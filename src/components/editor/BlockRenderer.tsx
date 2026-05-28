@@ -22,7 +22,6 @@ import { GenerativeUIBlock } from './blocks/GenerativeUIBlock';
 import { SlashMenuItem } from './SlashMenu';
 import { emitSaveEvent } from '@/lib/telemetry';
 import { useAppStore } from '@/store';
-import { mockDocuments } from '@/mock/data';
 
 // 引入拖拽依赖
 import {
@@ -74,9 +73,11 @@ const BlockRegistry: RegistryType = {
 export function BlockRenderer({
   blocks: initialBlocks,
   noteId = 'mock-note-id',
+  documents = [],
 }: {
   blocks: Block[];
   noteId?: string;
+  documents?: { id: string; title: string }[];
 }) {
   const router = useRouter();
   const setNoteContext = useAppStore((state) => state.setNoteContext); // ✨ 取出更新方法
@@ -515,7 +516,7 @@ export function BlockRenderer({
                   onInsert={insertBlock}
                   forceSyncToken={forceSyncToken}
                   autoFocus={autoFocusBlockId === block.id}
-                  documents={mockDocuments}
+                  documents={documents}
                 />
               </SortableBlockItem>
             );

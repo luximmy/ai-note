@@ -1,8 +1,9 @@
 // src/app/app/note/[id]/page.tsx
 import { getNoteById } from '@/actions/note';
 import { notFound } from 'next/navigation';
-import { BlockRenderer } from '@/components/editor/BlockRenderer'; // <-- 引入刚写的组件
+import { BlockRenderer } from '@/components/editor/BlockRenderer';
 import { BacklinksPanel } from '@/components/knowledge/BacklinksPanel';
+import { getAllDocumentsMeta } from '@/db/queries';
 import { Document } from '@/types';
 
 interface NotePageProps {
@@ -15,18 +16,16 @@ export default async function NotePage({ params }: NotePageProps) {
   try {
     note = await getNoteById(id);
   } catch (error: unknown) {
-    // 1. 默认捕获到的类型是未知的 unknown
-
-    // 2. 运行时校验：它必须是一个标准的 Error 对象，我们才能安全地读取 .message
     if (error instanceof Error) {
       if (error.message.includes('404')) {
         notFound();
       }
     }
-
-    // 3. 如果不是 Error 实例（比如抛出了一个字符串），或者不是 404，就继续往上抛
     throw error;
   }
+
+  const documentsMeta = await getAllDocumentsMeta();
+
   return (
     <article className='space-y-8 pb-32'>
       <header className='space-y-4'>
@@ -36,12 +35,12 @@ export default async function NotePage({ params }: NotePageProps) {
         </h1>
       </header>
 
-      {/* 核心改动：把原来的占位符替换为真实的 Block 渲染引擎 */}
       <section className='min-h-[500px] border-t pt-8'>
         <BlockRenderer
           key={note.id}
           blocks={note?.blocks || []}
           noteId={id}
+          documents={documentsMeta}
         />
       </section>
 

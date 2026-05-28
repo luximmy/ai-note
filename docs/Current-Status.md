@@ -3,9 +3,9 @@
 ## 1. 项目基本信息
 
 - **项目名称**：ai-note
-- **当前阶段**：阶段三全部完成；阶段四全部完成（拖拽排序 ✅ + AI 局部重写 ✅ + 知识网络 ✅ + 收尾打磨 ✅ + 暗色模式 ✅）；阶段五 RAG + Citations 已完成
-- **当前重心**：阶段五 RAG + Citations 已交付，可开启阶段六
-- **上次更新时间**：2026-05-27
+- **当前阶段**：阶段三全部完成；阶段四全部完成（拖拽排序 ✅ + AI 局部重写 ✅ + 知识网络 ✅ + 收尾打磨 ✅ + 暗色模式 ✅）；阶段五 RAG + Citations 已完成；阶段六真实数据层已完成
+- **当前重心**：阶段六 SQLite + Drizzle ORM 已交付，数据真正持久化
+- **上次更新时间**：2026-05-28
 
 ## 2. 已完成里程碑 (Completed)
 
@@ -53,10 +53,11 @@
 - [x] **阶段四收尾打磨完成**：wikilink-parser 单元测试（12 个用例）；修复 wikilink-decoration 多链接点击失效 + 变量遮蔽 bug；RewriteToolbar 加 Escape 关闭 + 视口边界翻转 + 提交按钮；SortableBlockItem 加二次确认删除 + aria-label 无障碍；BacklinksPanel 加错误态/空态提示 + sourceEmoji 解耦 mockDocuments；GraphView 加空态提示 + Canvas ARIA 属性 + 图谱页错误重试；暗色模式颜色适配（wikilink + 图谱 canvas 颜色改为 CSS 变量）。
 - [x] **暗色模式全量实现完成**：安装 `next-themes` + `ThemeProvider`（`attribute="class"` + `defaultTheme="system"`）；创建 `ThemeToggle` 组件（亮色/暗色/跟随系统三级切换）；21 个文件 43 处硬编码颜色迁移为 shadcn 语义化 token（`bg-background`、`text-foreground`、`bg-muted`、`text-muted-foreground`、`bg-primary`、`border-border` 等）；CodeBlock 保留深色不变（有意设计）；测试 + lint 零错误。
 - [x] **RAG 检索增强 + Citations 引用溯源完成（任务 5.1）**：`src/lib/retrieval.ts` 实现 TF-IDF 关键词检索引擎（中英文分词 + TF-IDF 评分 + Edge Runtime 兼容）；`/api/chat` 接入 RAG —— 提取用户 query 跨所有笔记检索相关区块，构建带编号的「检索到的相关知识片段」注入 system prompt，要求模型使用 `[N]` 引用标记；`createUIMessageStream` 注入 `data-citations` 自定义数据 part 到流式响应；`CitationChip` 内联引用标记组件（hover popover 显示来源预览）；`CitationSources` 底部来源卡片列表（可跳转源笔记）；`ChatPanel` 解析 `[N]` 标记交替渲染 ReactMarkdown 和 CitationChip；`SearchResultFragment` 类型扩展 `noteId` 字段；测试 + lint 零错误。
+- [x] **真实数据层完成（任务 6.1）**：Mock 数据全面替换为 SQLite + Drizzle ORM 持久化。新建 `src/db/` 数据层（schema.ts 表定义 + index.ts 连接单例 + queries.ts 数据访问层 + seed.ts 幂等填充）；7 个 Server Actions 改写为调用 DB 查询（删除 `simulateNetwork` 假延迟/失败）；`/api/chat` 移除 Edge Runtime 改用 Node.js 以支持 better-sqlite3；`layout.tsx` 拆为 Server Component（DB 查询）+ `AppShell.tsx` Client Component；`BlockRenderer` 接受 `documents` prop 替代 mock 硬编码；`retrieval.ts` 删除 mock 延迟；tiptap 全家桶升级至 3.23.6 修复版本冲突；build + 22 tests 全部通过。
 
 ## 3. 进行中的任务 (In Progress)
 
-- 阶段五 RAG + Citations 已完成，可开启阶段六
+- 阶段六真实数据层已完成，数据已持久化至 SQLite
 
 ## 4. 下一阶段任务派发 (Next Steps)
 
@@ -74,8 +75,8 @@
 
 ## 5. 关键备注 (Context Memo)
 
-- **当前进展结论**：阶段三全部完成，阶段四全部功能已交付（P0 拖拽排序 + P1 AI 局部重写 + P2 知识网络）。编辑器已具备完整的 Block 编辑、AI 改写、`[[wikilink]]` 双向链接与图谱可视化能力。
-- **下一步方向**：阶段四收尾，可考虑 UI 打磨、测试补全、性能优化等。
+- **当前进展结论**：阶段六已完成，Mock 数据全面替换为 SQLite + Drizzle ORM。笔记数据真正持久化，重启不丢失。编辑器 CRUD、图谱、RAG 检索均已接入真实数据库。
+- **下一步方向**：可考虑语义向量检索（Embedding 替换 TF-IDF）、多模态输入、用户认证、协作功能等。
 
 ## 6. 技术栈接入状态澄清
 
@@ -86,3 +87,4 @@
 | **Vercel AI SDK** (`ai` / `@ai-sdk/react` / `@ai-sdk/openai`) | AI 交互引擎 | **已接入** | `route.ts` 使用 `streamText` + `createOpenAI` 调用 DeepSeek；`ChatPanel.tsx` 使用 `useChat` + `DefaultChatTransport`。 |
 | **Zustand** | 跨组件全局状态 | **已接入，扩展为 Agent ↔ Editor 事件总线** | Store 管理侧边栏/面板开关 + `noteContext`（笔记上下文）+ `pendingInsertBlocks`（AI → 编辑器插入指令）。 |
 | **react-markdown + remark-gfm** | AI 回复富文本渲染 | **已接入** | `ChatPanel` 使用 `ReactMarkdown` 渲染 AI 回复，支持 GFM 语法（表格、任务列表等），配合 `@tailwindcss/typography` 样式。 |
+| **Drizzle ORM + better-sqlite3** | 数据持久化层 | **已接入** | `src/db/schema.ts` 定义 documents/blocks 两张表；`src/db/queries.ts` 提供 7 个 CRUD 函数；`src/db/seed.ts` 幂等填充种子数据；WAL 模式 + busy_timeout。 |
