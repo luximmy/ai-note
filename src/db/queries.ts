@@ -1,9 +1,14 @@
 import { db, ensureSeeded } from './index';
-import { documents, blocks } from './schema';
+import { documents, blocks, blockEmbeddings } from './schema';
+import { eq, asc } from 'drizzle-orm';
+import { embedAndStoreBlock, backfillMissingEmbeddings } from '@/lib/embedding-store';
 
 // Seed database on first module load (idempotent)
 ensureSeeded();
-import { eq, asc } from 'drizzle-orm';
+// Backfill embeddings for blocks that don't have them yet
+backfillMissingEmbeddings().catch((err) =>
+  console.error('[Embedding] Backfill failed:', err),
+);
 import type {
   Document,
   Block,
@@ -172,6 +177,13 @@ export async function updateBlock(
     })
     .where(eq(blocks.id, blockId))
     .run();
+
+  // Re-embed if content changed (fire-and-forget)
+  if (updates.content !== undefined && updates.content) {
+    embedAndStoreBlock(blockId, updates.content).catch((err) =>
+      console.error('[Embedding] Update failed for block', blockId, err),
+    );
+  }
 }
 
 export async function addBlock(
@@ -219,6 +231,13 @@ export async function addBlock(
       authorId: newBlock.metadata?.authorId ?? null,
     })
     .run();
+
+  // Embed new block (fire-and-forget)
+  if (newBlock.content) {
+    embedAndStoreBlock(newBlock.id, newBlock.content).catch((err) =>
+      console.error('[Embedding] Create failed for block', newBlock.id, err),
+    );
+  }
 }
 
 export async function deleteBlock(
@@ -233,6 +252,8 @@ export async function deleteBlock(
   if (!target) return;
 
   db.delete(blocks).where(eq(blocks.id, blockId)).run();
+  // Explicitly delete embedding (CASCADE also handles this)
+  db.delete(blockEmbeddings).where(eq(blockEmbeddings.blockId, blockId)).run();
 
   // Shift blocks after the deleted one down by 1
   const remaining = db

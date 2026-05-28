@@ -6,8 +6,7 @@ import {
   createUIMessageStream,
   createUIMessageStreamResponse,
 } from 'ai';
-import { keywordSearch } from '@/lib/retrieval';
-import { getAllDocumentsWithBlocks } from '@/db/queries';
+import { searchNotes } from '@/lib/retrieval';
 
 export const maxDuration = 30;
 
@@ -30,13 +29,12 @@ export async function POST(req: Request) {
         .map((p: { text: string }) => p.text)
         .join(' ') || '';
 
-    const allDocs = await getAllDocumentsWithBlocks();
-    const sources = await keywordSearch(query, allDocs, 5);
+    const sources = await searchNotes(query, 5);
 
     // 2. Build sources context for the system prompt
     const sourcesContext =
       sources.length > 0
-        ? `\n\n【检索到的相关知识片段】\n以下是通过关键词检索找到的相关笔记内容，请优先参考这些内容回答，并在引用时使用对应的编号标记 [1], [2] 等：\n${sources.map((s, i) => `[${i + 1}] 来源：《${s.noteTitle}》\n${s.content}`).join('\n\n')}`
+        ? `\n\n【检索到的相关知识片段】\n以下是通过语义检索找到的相关笔记内容，请优先参考这些内容回答，并在引用时使用对应的编号标记 [1], [2] 等：\n${sources.map((s, i) => `[${i + 1}] 来源：《${s.noteTitle}》\n${s.content}`).join('\n\n')}`
         : '';
 
     const citationRules = `\n\n【引用规则】

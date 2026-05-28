@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, integer, blob } from 'drizzle-orm/sqlite-core';
 
 export const documents = sqliteTable('documents', {
   id: text('id').primaryKey(),
@@ -22,4 +22,12 @@ export const blocks = sqliteTable('blocks', {
   createdAt: integer('created_at').notNull(),
   updatedAt: integer('updated_at').notNull(),
   authorId: text('author_id'),
+});
+
+export const blockEmbeddings = sqliteTable('block_embeddings', {
+  blockId: text('block_id')
+    .primaryKey()
+    .references(() => blocks.id, { onDelete: 'cascade' }),
+  embedding: blob('embedding', { mode: 'buffer' }).notNull(), // Float32Array → Buffer
+  updatedAt: integer('updated_at').notNull(),
 });

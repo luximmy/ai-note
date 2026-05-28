@@ -52,7 +52,32 @@
 - `ensureHtml` 向后兼容：检测内容是否已有 HTML 标签，纯文本则按双换行拆分为 `<p>` 段落
 - rewrite 流式 + 最终清理：流式阶段用 `<br>` 保持实时反馈，结束后替换为 `<p>` 段落确保持久化正确
 
+## 语义向量检索：TF-IDF → Qwen3 Embedding ✅
+
+**目标**：将 RAG 检索从 TF-IDF 关键词匹配升级为语义向量搜索，理解语义而非字面匹配。
+
+**实现内容**：
+
+1. **`src/db/schema.ts`（改写）** — 新增 `blockEmbeddings` 表（blockId PK, embedding BLOB, updatedAt），Drizzle `blob({ mode: 'buffer' })` 存储 Float32Array
+2. **`src/db/index.ts`（改写）** — DDL 新增 `CREATE TABLE IF NOT EXISTS block_embeddings`
+3. **`src/lib/embedding.ts`（新建）** — DashScope Qwen3 Embedding 客户端，`embedText(text)` 单条 embedding，`embedBatch(texts)` 分批并行（每批 6 个，200ms 间隔防限流），复用 `@ai-sdk/openai` + `ai` SDK 的 `embed()` 函数
+4. **`src/lib/embedding-store.ts`（新建）** — 向量存储（`storeEmbedding`）、余弦相似度计算（`cosine`）、启动 backfill（`backfillMissingEmbeddings` 幂等补齐缺失 embedding）、语义搜索（`semanticSearch` embed query → 全量向量比对 → top-K）
+5. **`src/lib/retrieval.ts`（改写）** — 删除 TF-IDF 逻辑，改名为 `searchNotes`，调用 `semanticSearch`，从 DB 查询 block/doc metadata 做结果补充
+6. **`src/db/queries.ts`（改写）** — `updateBlock` / `addBlock` 后 fire-and-forget 调用 `embedAndStoreBlock`；`deleteBlock` 显式删除 embedding；启动时 `backfillMissingEmbeddings()`
+7. **`src/app/api/chat/route.ts`（改写）** — import 改为 `searchNotes`，删除 `getAllDocumentsWithBlocks()` 全量加载（语义搜索直接从 DB 读）
+8. **`.env.example`（新建）** — 文档化 `DEEPSEEK_API_KEY` + `DASHSCOPE_API_KEY`
+9. **`src/components/editor/BlockRenderer.tsx`（改写）** — `DndContext` 添加 `id="note-blocks-dnd"` 修复 SSR hydration mismatch
+
+**技术决策**：
+- DashScope OpenAI 兼容 API：复用已有的 `@ai-sdk/openai` + `ai` SDK，无需新依赖
+- SQLite BLOB 存储向量：1024 维 × 4 字节 = 4KB/行，500 blocks ≈ 2MB，零外部依赖
+- JS 原生余弦相似度：500 blocks × 1024 维 < 5ms，无需向量数据库
+- Fire-and-forget embedding：区块保存时不阻塞（200-500ms API 调用），失败下次启动 backfill 重试
+- `cosineSimilarity` from `ai` SDK 要求 `number[]` 而非 `Float32Array`，自行实现 `cosine()` 更简洁
+
 ---
+
+# 2026-05-27 工作日志
 
 # 2026-05-27 工作日志
 

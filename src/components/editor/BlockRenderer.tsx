@@ -489,6 +489,7 @@ export function BlockRenderer({
   return (
     <div className='space-y-4 pb-32'>
       <DndContext
+        id="note-blocks-dnd"
         sensors={sensors}
         collisionDetection={closestCenter}
         onDragStart={handleDragStart} // 👈 绑定事件

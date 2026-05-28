@@ -44,6 +44,11 @@ function getDb() {
         updated_at INTEGER NOT NULL,
         author_id TEXT
       );
+      CREATE TABLE IF NOT EXISTS block_embeddings (
+        block_id TEXT PRIMARY KEY REFERENCES blocks(id) ON DELETE CASCADE,
+        embedding BLOB NOT NULL,
+        updated_at INTEGER NOT NULL
+      );
     `);
 
     globalForDb.__aiNoteSqlite = sqlite;

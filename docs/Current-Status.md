@@ -3,8 +3,8 @@
 ## 1. 项目基本信息
 
 - **项目名称**：ai-note
-- **当前阶段**：阶段三全部完成；阶段四全部完成（拖拽排序 ✅ + AI 局部重写 ✅ + 知识网络 ✅ + 收尾打磨 ✅ + 暗色模式 ✅）；阶段五 RAG + Citations 已完成；阶段六真实数据层已完成
-- **当前重心**：阶段六 SQLite + Drizzle ORM 已交付，数据真正持久化
+- **当前阶段**：阶段三全部完成；阶段四全部完成（拖拽排序 ✅ + AI 局部重写 ✅ + 知识网络 ✅ + 收尾打磨 ✅ + 暗色模式 ✅）；阶段五 RAG + Citations 已完成；阶段六真实数据层已完成；阶段七语义向量检索已完成
+- **当前重心**：阶段七 Qwen3 Embedding 语义搜索已交付，RAG 检索从 TF-IDF 升级为语义向量
 - **上次更新时间**：2026-05-28
 
 ## 2. 已完成里程碑 (Completed)
@@ -55,6 +55,7 @@
 - [x] **RAG 检索增强 + Citations 引用溯源完成（任务 5.1）**：`src/lib/retrieval.ts` 实现 TF-IDF 关键词检索引擎（中英文分词 + TF-IDF 评分 + Edge Runtime 兼容）；`/api/chat` 接入 RAG —— 提取用户 query 跨所有笔记检索相关区块，构建带编号的「检索到的相关知识片段」注入 system prompt，要求模型使用 `[N]` 引用标记；`createUIMessageStream` 注入 `data-citations` 自定义数据 part 到流式响应；`CitationChip` 内联引用标记组件（hover popover 显示来源预览）；`CitationSources` 底部来源卡片列表（可跳转源笔记）；`ChatPanel` 解析 `[N]` 标记交替渲染 ReactMarkdown 和 CitationChip；`SearchResultFragment` 类型扩展 `noteId` 字段；测试 + lint 零错误。
 - [x] **真实数据层完成（任务 6.1）**：Mock 数据全面替换为 SQLite + Drizzle ORM 持久化。新建 `src/db/` 数据层（schema.ts 表定义 + index.ts 连接单例 + queries.ts 数据访问层 + seed.ts 幂等填充）；7 个 Server Actions 改写为调用 DB 查询（删除 `simulateNetwork` 假延迟/失败）；`/api/chat` 移除 Edge Runtime 改用 Node.js 以支持 better-sqlite3；`layout.tsx` 拆为 Server Component（DB 查询）+ `AppShell.tsx` Client Component；`BlockRenderer` 接受 `documents` prop 替代 mock 硬编码；`retrieval.ts` 删除 mock 延迟；tiptap 全家桶升级至 3.23.6 修复版本冲突；build + 22 tests 全部通过。
 - [x] **段落持久化修复**：`RichTextEditor` 保存时 `getText()` → `getHTML()` 保留 `<p>` 标签；加载时 `ensureHtml()` 将旧纯文本自动转为 HTML 段落（向后兼容）；AI rewrite 流式阶段逐块 `insertContent` 保持实时反馈，流结束后替换为正确 `<p>` HTML；新建 `strip-html.ts` 工具函数（`stripHtml` + `ensureHtml`），AI 上下文注入、RAG 分词、wikilink 解析均用 `stripHtml` 清理 HTML。
+- [x] **语义向量检索完成（任务 7.1）**：TF-IDF 关键词匹配替换为 Qwen3 Embedding 语义搜索。新建 `src/lib/embedding.ts`（DashScope embedding 客户端）+ `src/lib/embedding-store.ts`（SQLite BLOB 向量存储 + 余弦相似度 + 启动 backfill + 语义搜索）；`retrieval.ts` 改为 `searchNotes` 调用语义搜索；`queries.ts` 挂载 embedding 到 update/add/delete 路径（fire-and-forget）；chat route 删除全量加载改为直接语义搜索；`DndContext` 添加稳定 id 修复 SSR hydration mismatch。build + 22 tests 全部通过。
 
 ## 3. 进行中的任务 (In Progress)
 
@@ -76,8 +77,8 @@
 
 ## 5. 关键备注 (Context Memo)
 
-- **当前进展结论**：阶段六已完成，Mock 数据全面替换为 SQLite + Drizzle ORM。笔记数据真正持久化，重启不丢失。编辑器 CRUD、图谱、RAG 检索均已接入真实数据库。
-- **下一步方向**：可考虑语义向量检索（Embedding 替换 TF-IDF）、多模态输入、用户认证、协作功能等。
+- **当前进展结论**：阶段七已完成，RAG 检索从 TF-IDF 升级为 Qwen3 Embedding 语义向量搜索。Embedding 存储在 SQLite BLOB 中，区块保存时增量更新，启动时幂等 backfill。
+- **下一步方向**：可考虑用户认证、协作编辑、多模态输入、移动端适配等。需配置 `DASHSCOPE_API_KEY` 才能启用语义搜索。
 
 ## 6. 技术栈接入状态澄清
 
@@ -88,4 +89,5 @@
 | **Vercel AI SDK** (`ai` / `@ai-sdk/react` / `@ai-sdk/openai`) | AI 交互引擎 | **已接入** | `route.ts` 使用 `streamText` + `createOpenAI` 调用 DeepSeek；`ChatPanel.tsx` 使用 `useChat` + `DefaultChatTransport`。 |
 | **Zustand** | 跨组件全局状态 | **已接入，扩展为 Agent ↔ Editor 事件总线** | Store 管理侧边栏/面板开关 + `noteContext`（笔记上下文）+ `pendingInsertBlocks`（AI → 编辑器插入指令）。 |
 | **react-markdown + remark-gfm** | AI 回复富文本渲染 | **已接入** | `ChatPanel` 使用 `ReactMarkdown` 渲染 AI 回复，支持 GFM 语法（表格、任务列表等），配合 `@tailwindcss/typography` 样式。 |
-| **Drizzle ORM + better-sqlite3** | 数据持久化层 | **已接入** | `src/db/schema.ts` 定义 documents/blocks 两张表；`src/db/queries.ts` 提供 7 个 CRUD 函数；`src/db/seed.ts` 幂等填充种子数据；WAL 模式 + busy_timeout。 |
+| **Drizzle ORM + better-sqlite3** | 数据持久化层 | **已接入** | `src/db/schema.ts` 定义 documents/blocks/block_embeddings 三张表；`src/db/queries.ts` 提供 7 个 CRUD 函数 + embedding 挂载；`src/db/seed.ts` 幂等填充种子数据；WAL 模式 + busy_timeout。 |
+| **DashScope Qwen3 Embedding** | 语义向量检索 | **已接入** | `src/lib/embedding.ts` 调用 DashScope OpenAI 兼容 API 生成 1024 维向量；`src/lib/embedding-store.ts` 存储在 SQLite BLOB + JS 余弦相似度搜索；block 保存时 fire-and-forget 增量更新。 |
