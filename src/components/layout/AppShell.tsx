@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { ChatPanel } from '@/components/ai/ChatPanel';
 import { FilePlus, LogOut, Network, Trash2, User } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { createNote, deleteNote } from '@/actions/note';
 
@@ -29,17 +29,27 @@ export function AppShell({ documents: initialDocuments, user, children }: AppShe
   const router = useRouter();
   const isGraphPage = pathname === '/app/graph';
 
-  const [documents, setDocuments] = useState(initialDocuments);
+  const [localDocuments, setLocalDocuments] = useState<DocumentMeta[]>([]);
   const [agentPanelWidth, setAgentPanelWidth] = useState(320);
   const [creating, setCreating] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; title: string } | null>(null);
   const [deleting, setDeleting] = useState(false);
   const isDraggingRef = useRef(false);
 
-  // Sync with server state when initialDocuments changes
-  useEffect(() => {
-    setDocuments(initialDocuments);
-  }, [initialDocuments]);
+  // Merge server documents with local changes
+  const documents = useMemo(() => {
+    if (localDocuments.length === 0) return initialDocuments;
+    // Merge: keep server order but apply local additions/deletions
+    const localIds = new Set(localDocuments.map((d) => d.id));
+    const serverIds = new Set(initialDocuments.map((d) => d.id));
+
+    // Documents in local but not in server (new additions)
+    const additions = localDocuments.filter((d) => !serverIds.has(d.id));
+    // Documents in server but not in local (deletions)
+    const remaining = initialDocuments.filter((d) => localIds.has(d.id));
+
+    return [...remaining, ...additions];
+  }, [initialDocuments, localDocuments]);
 
   async function handleLogout() {
     try {
@@ -57,7 +67,7 @@ export function AppShell({ documents: initialDocuments, user, children }: AppShe
     try {
       const { id } = await createNote('无标题笔记', '📝');
       const newDoc: DocumentMeta = { id, title: '无标题笔记', emoji: '📝' };
-      setDocuments((prev) => [...prev, newDoc]);
+      setLocalDocuments((prev) => [...prev, newDoc]);
       router.push(`/app/note/${id}`);
     } catch (error) {
       console.error('Create note failed:', error);
@@ -71,7 +81,7 @@ export function AppShell({ documents: initialDocuments, user, children }: AppShe
     setDeleting(true);
     try {
       await deleteNote(deleteTarget.id);
-      setDocuments((prev) => prev.filter((d) => d.id !== deleteTarget.id));
+      setLocalDocuments((prev) => prev.filter((d) => d.id !== deleteTarget.id));
       if (pathname === `/app/note/${deleteTarget.id}`) {
         router.push('/app');
       }

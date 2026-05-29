@@ -13,7 +13,7 @@ import rehypeRaw from 'rehype-raw';
 import { toast } from 'sonner';
 import { CitationChip } from './CitationChip';
 import { CitationSources } from './CitationSources';
-import { MessageSquarePlus, Trash2, ChevronDown, Pencil, Check, X } from 'lucide-react';
+import { MessageSquarePlus, Trash2, ChevronDown, Pencil } from 'lucide-react';
 import type { SearchResultFragment } from '@/types';
 
 interface ChatSession {
@@ -57,7 +57,9 @@ export function ChatPanel() {
     }
   }, []);
 
+  // Load sessions on mount
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadSessions();
   }, [loadSessions]);
 
