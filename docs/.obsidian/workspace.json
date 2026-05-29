@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "Record-of-Pitfalls.md",
+                "file": "Project-Deep-Dive.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "Record-of-Pitfalls"
+              "title": "Project-Deep-Dive"
             }
           }
         ]
@@ -94,7 +94,7 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "Record-of-Pitfalls.md",
+                "file": "Project-Deep-Dive.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -104,7 +104,7 @@
                 "unlinkedCollapsed": true
               },
               "icon": "links-coming-in",
-              "title": "Record-of-Pitfalls 的反向链接列表"
+              "title": "Project-Deep-Dive 的反向链接列表"
             }
           },
           {
@@ -113,12 +113,12 @@
             "state": {
               "type": "outgoing-link",
               "state": {
-                "file": "Record-of-Pitfalls.md",
+                "file": "Project-Deep-Dive.md",
                 "linksCollapsed": false,
                 "unlinkedCollapsed": true
               },
               "icon": "links-going-out",
-              "title": "Record-of-Pitfalls 的出链列表"
+              "title": "Project-Deep-Dive 的出链列表"
             }
           },
           {
@@ -156,13 +156,13 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "Record-of-Pitfalls.md",
+                "file": "Project-Deep-Dive.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "Record-of-Pitfalls 的大纲"
+              "title": "Project-Deep-Dive 的大纲"
             }
           }
         ]
@@ -185,6 +185,13 @@
   },
   "active": "b44bb7375ff399f2",
   "lastOpenFiles": [
+    "Interview-QA.md",
+    "Interview-QA.md.tmp.303548.9215b7d8e3af",
+    "简历.md",
+    "Project-Deep-Dive.md",
+    "Project-Deep-Dive.md.tmp.303548.05c2b4d962c5",
+    "Daily-Log.md",
+    "Record-of-Pitfalls.md",
     "Daily-Log.md.tmp.303548.19cf19f6df0b",
     "Current-Status.md.tmp.303548.caf1984961eb",
     "Daily-Log.md.tmp.303548.e31e78653d93",
@@ -194,7 +201,6 @@
     "Development-Guide.md",
     "Database-Architecture.md",
     "Data-Schema.md",
-    "Daily-Log.md",
     "Current-Status.md",
     "Architecture-and-Rules.md",
     "API-Reference.md",
