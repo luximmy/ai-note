@@ -67,6 +67,7 @@
 - [x] **Markdown 解析引擎重写**：`parseMarkdownToBlocks` 从按双换行分割的 chunk 解析改为逐行状态机解析。支持：JSON 代码块、代码块、标题、Todo 列表、无序列表、有序列表、分割线、引用块、段落。段落内容通过 `markdownToHtml` 转为 HTML（保留 **bold**、*italic**、`code` 等内联格式），Tiptap 可直接渲染。
 - [x] **Bug 修复：笔记列表新建/删除不刷新**：`AppShell` 的 `localDocuments` 初始为空数组导致合并逻辑失效，改为初始化为 `initialDocuments` + `useEffect` 同步。
 - [x] **Bug 修复：批量插入顺序反转**：所有 block 引用同一个 `lastBlockId` 导致并行插入后顺序反转，改为链式串行插入。
+- [x] **核心 lib 层测试覆盖**：新增 4 个测试文件（89 个 test case）。`strip-html.test.ts`（29 case）覆盖 `stripHtml`/`markdownToHtml`/`ensureHtml` 的 HTML 实体解码、br 转换、行内 markdown 语法、段落包裹等边界；`parse-markdown-to-blocks.test.ts`（30 case）覆盖标题/代码块/JSON 代码块/Todo/列表/分割线/引用块/段落的解析及混合内容；`embedding-store.test.ts`（11 case）覆盖 `cosine` 相似度（正交/反向/零向量/高维）、`vecToBuffer`/`bufferToVec` round-trip 精度；`GenerativeUIBlock.utils.test.ts`（19 case）覆盖 `sanitizeProps` 类型防护和 `extractJsonFromStream` 流式 JSON 提取。`GenerativeUIBlock.tsx` 导出 `sanitizeProps` 和 `extractJsonFromStream` 供独立测试。
 
 ## 3. 进行中的任务 (In Progress)
 

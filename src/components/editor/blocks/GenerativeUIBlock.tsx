@@ -30,7 +30,7 @@ export const KNOWN_COMPONENT_IDS = Object.keys(
   AIComponentRegistry,
 ) as readonly string[];
 
-function sanitizeProps(raw: unknown): AIComponentProps {
+export function sanitizeProps(raw: unknown): AIComponentProps {
   if (raw !== null && typeof raw === 'object' && !Array.isArray(raw)) {
     return raw as AIComponentProps;
   }
@@ -41,7 +41,7 @@ function sanitizeProps(raw: unknown): AIComponentProps {
  * 从 AI 流式文本中提取 JSON 对象
  * 支持从 ```json ... ``` 代码块中提取，或直接解析完整 JSON
  */
-function extractJsonFromStream(text: string): Record<string, unknown> | null {
+export function extractJsonFromStream(text: string): Record<string, unknown> | null {
   // 尝试从 ```json ... ``` 代码块中提取
   const codeBlockMatch = text.match(/```json\s*([\s\S]*?)```/);
   if (codeBlockMatch) {

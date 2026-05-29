@@ -78,7 +78,7 @@
       }
     ],
     "direction": "horizontal",
-    "width": 300
+    "width": 200
   },
   "right": {
     "id": "e10a9618f06f8774",
@@ -185,6 +185,8 @@
   },
   "active": "b44bb7375ff399f2",
   "lastOpenFiles": [
+    "Daily-Log.md.tmp.303548.19cf19f6df0b",
+    "Current-Status.md.tmp.303548.caf1984961eb",
     "Daily-Log.md.tmp.303548.e31e78653d93",
     "Project-Vision-and-PRD.md",
     "Phase-4-Execution-Plan.md",

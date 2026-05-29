@@ -94,6 +94,23 @@
 - API Reference 按功能域分组（auth/chat/ai/editor），便于查阅
 - 保留已有的文档格式和风格，仅补充缺失内容
 
+## 核心 lib 层测试覆盖 ✅
+
+**目标**：补充核心纯函数的单元测试，提升面试时"质量保障"的回答底气。
+
+**实现内容**：
+
+1. **`src/lib/__tests__/strip-html.test.ts`（新建）** — 29 个 case，覆盖 `stripHtml`（标签去除、br 多种写法、HTML 实体解码、换行折叠）、`markdownToHtml`（bold/italic/code/del/link、词边界保护、混合格式）、`ensureHtml`（HTML 检测、纯文本段落包裹）
+2. **`src/lib/__tests__/parse-markdown-to-blocks.test.ts`（新建）** — 30 个 case，覆盖标题（H1-H3 + 四级降级）、代码块（带语言/无语言/未闭合）、JSON 代码块（generative_ui/code 降级/无效 JSON）、Todo 列表（checked/unchecked/大写 X）、无序/有序列表、分割线、引用块、段落内行内格式、Windows 行尾、混合内容
+3. **`src/lib/__tests__/embedding-store.test.ts`（新建）** — 11 个 case，覆盖 `cosine` 相似度（自身/正交/反向/零向量保护/高维）、`vecToBuffer`/`bufferToVec` round-trip 精度（含 1024 维模拟）、cosine + buffer 集成验证
+4. **`src/components/editor/blocks/__tests__/GenerativeUIBlock.utils.test.ts`（新建）** — 19 个 case，覆盖 `sanitizeProps`（null/undefined/array/string/number/object 防护）、`extractJsonFromStream`（代码块提取/裸 JSON/前后文字/无效 JSON/不完整 JSON/流式场景）
+5. **`src/components/editor/blocks/GenerativeUIBlock.tsx`（修改）** — 导出 `sanitizeProps` 和 `extractJsonFromStream` 供独立测试
+
+**技术决策**：
+- 纯函数优先：零 mock 成本、高 ROI，是最适合面试展示的测试
+- embedding-store 的 cosine/vecToBuffer/bufferToVec 是模块私有函数，采用"契约测试"策略（重新实现相同逻辑验证数学正确性），避免触发 DB 初始化
+- 测试描述使用中文，与项目已有测试风格一致
+
 ---
 
 # 2026-05-28 工作日志
