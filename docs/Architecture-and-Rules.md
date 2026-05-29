@@ -10,6 +10,8 @@
 - **状态管理**: `zustand` (跨组件全局状态) + 场景化本地状态策略（`useOptimistic` / 双缓冲）
 - **富文本/画布底层**: Tiptap (Headless 模式) — 已接入，`RichTextEditor` 基于 `@tiptap/react` + `StarterKit`
 - **AI 交互引擎**: Vercel AI SDK (`ai` & `@ai-sdk/react` & `@ai-sdk/openai`) — 已接入，通过 DeepSeek API（OpenAI 兼容协议）实现 streaming 对话
+- **数据库**: SQLite (better-sqlite3) + Drizzle ORM — 6 张表（users, documents, blocks, block_embeddings, chat_sessions, chat_messages）
+- **认证**: JWT (jose) + bcryptjs，httpOnly cookie，7 天有效期
 - **Markdown 渲染**: `react-markdown` + `remark-gfm` + `@tailwindcss/typography` — 已接入，用于 AI 回复的富文本渲染
 
 ## 2. 工程目录架构 (Directory Structure)
@@ -25,17 +27,37 @@ ai-note/
 ├── src/
 │   ├── actions/             # Server Actions (数据请求与逻辑代理层)
 │   ├── app/                 # 路由层 (仅包含页面骨架与 Layout)
-│   │   └── api/             #   API Routes (AI 聊天等服务端接口)
-│   │       └── chat/        #     DeepSeek 聊天 streaming 端点
+│   │   └── api/             #   API Routes
+│   │       ├── auth/        #     认证接口 (login, register, me, logout)
+│   │       ├── chat/        #     AI 聊天 streaming 端点 + 会话管理
+│   │       ├── generate-ui/ #     AI 组件生成 streaming 端点
+│   │       └── rewrite/     #     AI 局部重写 streaming 端点
 │   ├── components/          # 视图层
-│   │   ├── ai/              #   AI 组件 (TaskBoard, ChatPanel)
-│   │   ├── editor/          #   编辑器核心 (BlockRenderer, RichTextEditor, SlashMenu)
-│   │   │   ├── blocks/      #     区块组件 (ParagraphBlock, HeadingBlock, ...)
+│   │   ├── ai/              #   AI 组件 (ChatPanel, TaskBoard, DataTable, MermaidDiagram, Timeline, InsertPreview)
+│   │   ├── editor/          #   编辑器核心 (BlockRenderer, RichTextEditor, SlashMenu, RewriteToolbar)
+│   │   │   ├── blocks/      #     区块组件 (ParagraphBlock, HeadingBlock, CodeBlock, TodoBlock, GenerativeUIBlock)
+│   │   │   ├── extensions/  #     ProseMirror 插件 (wikilink-decoration)
 │   │   │   └── __tests__/   #     编辑器测试
+│   │   ├── knowledge/       #   知识网络 (GraphView, BacklinksPanel)
+│   │   ├── layout/          #   布局组件 (AppShell)
 │   │   └── ui/              #   通用 UI 组件 (shadcn/ui)
-│   ├── lib/                 # 纯函数与工具 (utils.ts, telemetry.ts)
-│   ├── mock/                # Mock 数据中心 (提供高保真 JSON 数据与模拟延迟)
-│   ├── store/               # Zustand 全局状态定义 (侧边栏/面板开关 + noteContext 笔记上下文 + pendingInsertBlock 事件总线)
+│   ├── db/                  # 数据库层 (SQLite + Drizzle ORM)
+│   │   ├── schema.ts        #   表定义 (6 张表)
+│   │   ├── index.ts         #   连接单例 (globalThis)
+│   │   ├── queries.ts       #   数据访问层
+│   │   ├── migrate.ts       #   数据迁移脚本
+│   │   ├── seed.ts          #   幂等 seed 脚本
+│   │   └── seed-data.ts     #   种子数据 (9 篇文档)
+│   ├── lib/                 # 纯函数与工具
+│   │   ├── auth.ts          #   JWT 认证 (jose + bcryptjs)
+│   │   ├── embedding.ts     #   DashScope embedding 客户端
+│   │   ├── embedding-store.ts # 向量存储与搜索
+│   │   ├── retrieval.ts     #   searchNotes() 搜索接口
+│   │   ├── parse-markdown-to-blocks.ts # Markdown → Block 解析引擎
+│   │   ├── strip-html.ts    #   HTML ↔ 纯文本转换
+│   │   ├── wikilink-parser.ts # [[wikilink]] 解析
+│   │   └── telemetry.ts     #   保存事件埋点
+│   ├── store/               # Zustand 全局状态定义
 │   └── types/               # TypeScript 全局接口定义 (如 Block Schema)
 └── pnpm-lock.yaml           # 锁定依赖版本
 ```
@@ -71,14 +93,15 @@ ai-note/
   3. 所有方案都必须具备失败提示、可恢复回滚，以及必要的服务端重新对齐机制（如 `router.refresh()`）。
   - **当前实现说明**：编辑器（`BlockRenderer`）采用双缓冲策略（`useState` + `useRef`），未使用 React `useOptimistic` hook。原因详见 `docs/Record-of-Pitfalls.md` 第 4 节——`useOptimistic` 的 Transition 时序与防抖窗口容易错位，导致 UI 回跳。
 
-### 3.3 数据代理与 Mock-First 机制
+### 3.3 数据代理与持久化机制
 
 - **禁止直接请求**: 前端组件永远不直接调用 Fetch 或真实数据库，必须且只能调用 `src/actions/` 下的 Server Actions。
-- **Mock 契约**: 当前开发阶段，Server Actions 必须显式模拟网络延迟和失败率。读接口默认 800ms（5% 失败率）；写接口固定 500ms（15% 失败率），并应保持可关闭或可配置，以便联调与验收。
+- **真实数据层**: Server Actions 直接调用 `src/db/queries.ts` 中的 Drizzle ORM 查询函数，操作 SQLite 数据库。所有文档和区块操作均通过 `userId` 参数实现多用户数据隔离。
+- **认证守卫**: Server Actions 通过 `getSession()` 验证 JWT cookie，未登录时抛出 `'未登录'` 错误。
 
 ### 3.4 AI 调用链路
 
-- **API Route 隔离**: AI 调用走独立的 `src/app/api/chat/route.ts`，与编辑器的 Server Actions 互不干扰。
+- **API Route 隔离**: AI 调用走独立的 API 路由（`/api/chat`、`/api/rewrite`、`/api/generate-ui`），与编辑器的 Server Actions 互不干扰。
 - **Provider 可替换**: 通过 `createOpenAI({ baseURL, apiKey })` 配置 DeepSeek，换 Provider 只改环境变量，不改业务代码。
 - **Streaming 优先**: 所有 AI 响应必须走 streaming，不允许阻塞式等待完整响应。
 - **上下文注入**: 当前笔记内容通过 system prompt 注入，不做客户端 RAG（demo 阶段策略）。
@@ -91,6 +114,6 @@ ai-note/
 
 1. **强类型约束**: 所有组件 Props、API 返回值必须有明确 TypeScript 接口，且优先复用 `src/types/index.ts` 中的 Block Schema。原则上禁止 `any`，仅允许在“动态注册表分发调用点”做局部、可审计的临时豁免。
 2. **极简代码与提前返回**: 避免深度嵌套的 `if/else`，采用早期返回 (Early Return) 模式。
-3. **避免过度抽象**: 在 Mock 跑通前，不要为了复用而过度封装组件。先保证数据流从 Mock -> Action -> UI 能顺畅单向跑通。
+3. **避免过度抽象**: 不要为了复用而过度封装组件。先保证数据流从 DB -> Action -> UI 能顺畅单向跑通。
 4. **日志排坑**: 调试 Client Component 时，认知到日志只会在浏览器控制台打印（严格模式下两次），不要因为终端无输出而误判代码未执行。
 5. **并发一致性基线**: 涉及防抖保存与高频输入的链路，必须具备“请求序号/版本戳”乱序保护，确保旧响应不会覆盖新状态。

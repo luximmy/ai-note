@@ -77,6 +77,23 @@
 - Markdown 解析改为逐行状态机：AI 回复经常用单换行，按双换行分割会导致所有内容降级为段落
 - 批量插入改为串行链式：每个 block 引用前一个 block 的 ID，保证顺序正确
 
+## 文档同步：5 篇文档与代码对齐 ✅
+
+**目标**：将文档与阶段八（用户认证 + 笔记管理 + AI 对话持久化）和阶段八附加（Generative UI 重构）的代码变更同步。
+
+**实现内容**：
+
+1. **`docs/Database-Architecture.md`** — 表数 3→6（新增 users、chat_sessions、chat_messages）；documents 表补充 user_id FK；新增数据迁移章节；queries 函数表按用户/文档/聊天分组（7→21 个）
+2. **`docs/API-Reference.md`** — Server Actions 7→10（新增 createNote/deleteNote/updateNote）；API Routes 2→14（新增 auth 系列 4 个、chat sessions 3 个、generate-ui 1 个）；queries 函数表完整更新
+3. **`docs/Architecture-and-Rules.md`** — 目录树删除 mock/，新增 db/、auth/、generate-ui/、knowledge/；Mock-First 章节改为真实数据层说明；技术栈补充数据库和认证
+4. **`docs/Development-Guide.md`** — 环境变量新增 AUTH_SECRET；自动建表 3→6；种子文档 5→9；项目结构树补充 auth.ts、migrate.ts、认证路由等
+5. **`docs/Data-Schema.md`** — 日期更新至 5/29；新增认证类型（SessionPayload）；新增数据库 Schema 类型（6 张表的运行时接口）；落地状态补充认证和聊天相关说明
+
+**技术决策**：
+- 数据库 Schema 类型以 Drizzle 表定义为真源，文档中展示等效的 TypeScript 接口
+- API Reference 按功能域分组（auth/chat/ai/editor），便于查阅
+- 保留已有的文档格式和风格，仅补充缺失内容
+
 ---
 
 # 2026-05-28 工作日志

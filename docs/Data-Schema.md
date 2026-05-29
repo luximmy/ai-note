@@ -1,6 +1,6 @@
 # 03-Data-Schema
 
-> 状态同步说明（2026-04-29）：当前类型定义以 `src/types/index.ts` 为唯一真源，本文件用于文档化展示，内容已与代码同步。
+> 状态同步说明（2026-05-29）：当前类型定义以 `src/types/index.ts` 为唯一真源，本文件用于文档化展示。数据库 schema 定义在 `src/db/schema.ts`，认证相关类型定义在 `src/lib/auth.ts`。
 
 TypeScript
 
@@ -132,11 +132,91 @@ export interface PendingInsert {
 }
 ```
 
+## 认证相关类型（定义在 `src/lib/auth.ts`）
+
+```ts
+// JWT Session 载荷
+export interface SessionPayload {
+  userId: string;
+  email: string;
+}
+```
+
+认证采用 JWT（jose 库，HS256 算法），token 有效期 7 天，通过 httpOnly cookie（`auth_token`）传递。密码使用 bcryptjs（salt rounds = 10）哈希存储。
+
+## 数据库 Schema 类型（定义在 `src/db/schema.ts`）
+
+以下为 Drizzle ORM 表定义对应的运行时类型（6 张表）：
+
+```ts
+// users 表
+interface User {
+  id: string;
+  email: string;         // UNIQUE
+  passwordHash: string;  // bcryptjs 哈希
+  name: string;
+  createdAt: number;     // Unix 时间戳 (ms)
+  updatedAt: number;
+}
+
+// documents 表（外键：user_id → users.id）
+interface DocumentRow {
+  id: string;
+  userId: string;        // 关联 users 表
+  title: string;
+  emoji: string | null;
+  coverImage: string | null;
+  tags: string | null;   // JSON string[]
+  lastAccessedAt: number;
+}
+
+// blocks 表（外键：document_id → documents.id）
+interface BlockRow {
+  id: string;
+  documentId: string;
+  type: string;          // BlockType
+  position: number;      // 0-based 排序
+  parentId: string | null;
+  content: string | null; // HTML 格式
+  attributes: string | null; // JSON
+  createdAt: number;
+  updatedAt: number;
+  authorId: string | null;
+}
+
+// block_embeddings 表（外键：block_id → blocks.id, CASCADE）
+interface BlockEmbeddingRow {
+  blockId: string;       // PK + FK
+  embedding: Buffer;     // Float32Array (1024 维)
+  updatedAt: number;
+}
+
+// chat_sessions 表（外键：user_id → users.id, CASCADE）
+interface ChatSessionRow {
+  id: string;
+  userId: string;
+  title: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
+// chat_messages 表（外键：session_id → chat_sessions.id, CASCADE）
+interface ChatMessageRow {
+  id: string;
+  sessionId: string;
+  role: string;          // 'user' | 'assistant'
+  content: string;       // JSON 序列化的消息 parts
+  createdAt: number;
+}
+```
+
 ## 落地状态核对
 
 - `BlockType` 已包含当前运行时支持的 `paragraph`、`heading`、`code`、`todo`、`generative_ui`，并在渲染层完成注册与展示。
-- `image`、`callout` 暂属于规划区块类型，尚未进入当前运行时 Schema；新增时需同步补齐类型、Mock、渲染组件和测试。
+- `image`、`callout` 暂属于规划区块类型，尚未进入当前运行时 Schema；新增时需同步补齐类型、渲染组件和测试。
 - `Block` 联合类型已纳入 `GenerativeUIBlock`，与编辑器运行时数据一致。
 - 动态注册表分发处仍保留局部、可审计的类型豁免；AI 组件 props 使用 `unknown` 边界，渲染前需通过白名单、normalize 或降级 UI 兜底。
-- Mock 数据中 `doc_004` 使用了 `componentId: 'AlertCard'`，该组件未注册在 `AIComponentRegistry` 中，会触发未知组件降级 UI（amber 色块）。此为刻意行为，用于验证降级策略。
+- 种子数据中 `doc_004` 使用了 `componentId: 'AlertCard'`，该组件未注册在 `AIComponentRegistry` 中，会触发未知组件降级 UI（amber 色块）。此为刻意行为，用于验证降级策略。
 - `PendingInsert` 接口定义在 `src/store/index.ts`（非 `types/index.ts`），是 Zustand 事件总线（`pendingInsertBlocks`）的载荷类型，用于 ChatPanel → BlockRenderer 的 AI 内容插入指令。详见上方「Store 相关类型」章节。
+- 数据库共 6 张表（users, documents, blocks, block_embeddings, chat_sessions, chat_messages），通过外键和 CASCADE 实现级联删除。
+- 认证系统基于 JWT + bcryptjs，SessionPayload 定义在 `src/lib/auth.ts`，不在 `types/index.ts` 中。

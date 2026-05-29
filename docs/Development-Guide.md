@@ -1,6 +1,6 @@
 # 开发指南
 
-> 更新时间：2026-05-28
+> 更新时间：2026-05-29
 
 ## 1. 环境准备
 
@@ -27,8 +27,9 @@ cp .env.example .env.local
 
 | 变量 | 获取方式 | 用途 |
 |------|---------|------|
-| `DEEPSEEK_API_KEY` | [DeepSeek Platform](https://platform.deepseek.com/) | AI 聊天 + 重写 |
+| `DEEPSEEK_API_KEY` | [DeepSeek Platform](https://platform.deepseek.com/) | AI 聊天 + 重写 + 组件生成 |
 | `DASHSCOPE_API_KEY` | [DashScope 控制台](https://dashscope.console.aliyun.com/) | 语义向量检索 |
+| `AUTH_SECRET` | 自定义（任意随机字符串） | JWT 签名/验证密钥 |
 
 ### 1.4 启动开发服务器
 
@@ -38,42 +39,50 @@ pnpm dev
 
 首次启动时会自动：
 1. 创建 `data/ai-note.db` 数据库
-2. 建表（documents, blocks, block_embeddings）
-3. 填充 5 篇种子文档 + 21 个区块
-4. 为所有区块生成 embedding（需要 DASHSCOPE_API_KEY）
+2. 建表（users, documents, blocks, block_embeddings, chat_sessions, chat_messages — 共 6 张）
+3. 运行数据迁移（添加 user_id 列、创建默认用户）
+4. 填充 9 篇种子文档（关联 `user_default` 用户）
+5. 为所有区块生成 embedding（需要 DASHSCOPE_API_KEY）
+6. 首个注册用户自动接管种子文档
 
 ## 2. 项目结构
 
 ```
 src/
-├── actions/           # Server Actions（note.ts — 7 个 CRUD 函数）
+├── actions/           # Server Actions（note.ts — 10 个函数：CRUD + 图谱 + 反链）
 ├── app/
+│   ├── (auth)/        # 认证页面（login, register）
 │   ├── api/
-│   │   ├── chat/      # AI 聊天 streaming 端点
+│   │   ├── auth/      # 认证接口（login, register, me, logout）
+│   │   ├── chat/      # AI 聊天 streaming 端点 + 会话/消息 CRUD
+│   │   ├── generate-ui/ # AI 组件生成 streaming 端点
 │   │   └── rewrite/   # AI 局部重写 streaming 端点
 │   └── app/
-│       ├── layout.tsx  # Server Component — 从 DB 获取文档列表
-│       ├── page.tsx    # 笔记列表首页
+│       ├── layout.tsx  # Server Component — 认证检查 + 从 DB 获取文档列表
+│       ├── page.tsx    # 仪表盘（提示选择笔记）
 │       ├── graph/      # 知识图谱全屏页面
 │       └── note/[id]/  # 笔记详情页
 ├── components/
-│   ├── ai/            # ChatPanel, CitationChip, CitationSources
-│   ├── editor/        # BlockRenderer, RichTextEditor, SlashMenu, RewriteToolbar
+│   ├── ai/            # ChatPanel, CitationChip, CitationSources, InsertPreview, TaskBoard, DataTable, MermaidDiagram, Timeline
+│   ├── editor/        # BlockRenderer, RichTextEditor, SlashMenu, RewriteToolbar, SortableBlockItem
 │   │   ├── blocks/    # ParagraphBlock, HeadingBlock, CodeBlock, TodoBlock, GenerativeUIBlock
 │   │   └── extensions/# wikilink-decoration (ProseMirror 插件)
 │   ├── knowledge/     # GraphView (d3-force), BacklinksPanel
 │   ├── layout/        # AppShell (Client Component)
 │   └── ui/            # shadcn/ui 组件
-├── db/                # 数据库层
-│   ├── schema.ts      # Drizzle 表定义
-│   ├── index.ts       # 连接单例 (globalThis)
-│   ├── queries.ts     # 数据访问层
+├── db/                # 数据库层（SQLite + Drizzle ORM）
+│   ├── schema.ts      # Drizzle 表定义（6 张表）
+│   ├── index.ts       # 连接单例 (globalThis) + 自动建表
+│   ├── queries.ts     # 数据访问层（用户 + 文档 + 区块 + 聊天）
+│   ├── migrate.ts     # 数据迁移脚本（user_id 列、默认用户）
 │   ├── seed.ts        # 幂等 seed 脚本
-│   └── seed-data.ts   # 种子数据
+│   └── seed-data.ts   # 种子数据（9 篇文档）
 ├── lib/               # 工具函数
-│   ├── embedding.ts   # DashScope embedding 客户端
-│   ├── embedding-store.ts # 向量存储与搜索
+│   ├── auth.ts        # JWT 认证（jose + bcryptjs）
+│   ├── embedding.ts   # DashScope Qwen3 embedding 客户端
+│   ├── embedding-store.ts # 向量存储与余弦相似度搜索
 │   ├── retrieval.ts   # searchNotes() 搜索接口
+│   ├── parse-markdown-to-blocks.ts # Markdown → Block 解析引擎
 │   ├── strip-html.ts  # HTML ↔ 纯文本转换
 │   ├── wikilink-parser.ts # [[wikilink]] 解析
 │   └── telemetry.ts   # 保存事件埋点
@@ -150,6 +159,7 @@ sqlite3 data/ai-note.db
 项目已配置 Vercel 部署。环境变量需在 Vercel 控制台设置：
 - `DEEPSEEK_API_KEY`
 - `DASHSCOPE_API_KEY`
+- `AUTH_SECRET`
 
 **注意**：Vercel 的 Serverless 环境是无状态的，SQLite 文件会在每次冷启动时重建。生产环境应考虑使用持久化数据库（如 Turso/libsql）。
 
