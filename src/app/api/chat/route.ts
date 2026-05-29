@@ -7,6 +7,7 @@ import {
   createUIMessageStreamResponse,
 } from 'ai';
 import { searchNotes } from '@/lib/retrieval';
+import { getSession } from '@/lib/auth';
 
 export const maxDuration = 30;
 
@@ -17,6 +18,14 @@ const deepseek = createOpenAI({
 
 export async function POST(req: Request) {
   try {
+    const session = await getSession();
+    if (!session) {
+      return new Response(
+        JSON.stringify({ error: '未登录' }),
+        { status: 401, headers: { 'Content-Type': 'application/json' } },
+      );
+    }
+
     const { messages, noteContext } = await req.json();
 
     // 1. RAG: Extract query from last user message and search across all notes

@@ -1,6 +1,13 @@
 import { db, ensureSeeded } from './index';
-import { documents, blocks, blockEmbeddings } from './schema';
-import { eq, asc } from 'drizzle-orm';
+import {
+  users,
+  documents,
+  blocks,
+  blockEmbeddings,
+  chatSessions,
+  chatMessages,
+} from './schema';
+import { eq, asc, and, desc } from 'drizzle-orm';
 import { embedAndStoreBlock, backfillMissingEmbeddings } from '@/lib/embedding-store';
 
 // Seed database on first module load (idempotent)
@@ -78,9 +85,46 @@ function parseTags(tagsJson: string | null): string[] {
 
 // ─── Exported query functions ───
 
-export async function getAllDocumentsMeta(): Promise<
-  Pick<Document, 'id' | 'title' | 'emoji'>[]
-> {
+// User queries
+export async function createUser(
+  id: string,
+  email: string,
+  passwordHash: string,
+  name: string,
+  now: number,
+): Promise<void> {
+  db.insert(users)
+    .values({
+      id,
+      email,
+      passwordHash,
+      name,
+      createdAt: now,
+      updatedAt: now,
+    })
+    .run();
+}
+
+export async function getUserByEmail(email: string) {
+  return db
+    .select()
+    .from(users)
+    .where(eq(users.email, email))
+    .get();
+}
+
+export async function getUserById(id: string) {
+  return db
+    .select()
+    .from(users)
+    .where(eq(users.id, id))
+    .get();
+}
+
+// Document queries (with user isolation)
+export async function getAllDocumentsMeta(
+  userId: string,
+): Promise<Pick<Document, 'id' | 'title' | 'emoji'>[]> {
   const rows = db
     .select({
       id: documents.id,
@@ -88,6 +132,7 @@ export async function getAllDocumentsMeta(): Promise<
       emoji: documents.emoji,
     })
     .from(documents)
+    .where(eq(documents.userId, userId))
     .all();
   return rows.map((r) => ({
     id: r.id,
@@ -96,11 +141,14 @@ export async function getAllDocumentsMeta(): Promise<
   }));
 }
 
-export async function getDocumentById(id: string): Promise<Document | null> {
+export async function getDocumentById(
+  id: string,
+  userId: string,
+): Promise<Document | null> {
   const doc = db
     .select()
     .from(documents)
-    .where(eq(documents.id, id))
+    .where(and(eq(documents.id, id), eq(documents.userId, userId)))
     .get();
   if (!doc) return null;
 
@@ -123,8 +171,14 @@ export async function getDocumentById(id: string): Promise<Document | null> {
   };
 }
 
-export async function getAllDocumentsWithBlocks(): Promise<Document[]> {
-  const docs = db.select().from(documents).all();
+export async function getAllDocumentsWithBlocks(
+  userId: string,
+): Promise<Document[]> {
+  const docs = db
+    .select()
+    .from(documents)
+    .where(eq(documents.userId, userId))
+    .all();
   const allBlocks = db
     .select()
     .from(blocks)
@@ -148,6 +202,114 @@ export async function getAllDocumentsWithBlocks(): Promise<Document[]> {
     blocks: (blocksByDoc.get(doc.id) || []).map(dbRowToBlock),
     backlinks: [],
   }));
+}
+
+export async function createDocument(
+  id: string,
+  userId: string,
+  title: string,
+  emoji?: string,
+): Promise<void> {
+  const now = Date.now();
+  db.insert(documents)
+    .values({
+      id,
+      userId,
+      title,
+      emoji: emoji ?? null,
+      coverImage: null,
+      tags: null,
+      lastAccessedAt: now,
+    })
+    .run();
+
+  // Create a default empty paragraph block
+  db.insert(blocks)
+    .values({
+      id: `${id}_block_${now}`,
+      documentId: id,
+      type: 'paragraph',
+      position: 0,
+      parentId: null,
+      content: '',
+      attributes: null,
+      createdAt: now,
+      updatedAt: now,
+      authorId: null,
+    })
+    .run();
+}
+
+export async function migrateDefaultUserDocuments(userId: string): Promise<number> {
+  const DEFAULT_USER_ID = 'user_default';
+
+  // Check if there are documents under user_default
+  const defaultDocs = db
+    .select()
+    .from(documents)
+    .where(eq(documents.userId, DEFAULT_USER_ID))
+    .all();
+
+  if (defaultDocs.length === 0) return 0;
+
+  // Transfer documents to the new user
+  db.update(documents)
+    .set({ userId })
+    .where(eq(documents.userId, DEFAULT_USER_ID))
+    .run();
+
+  return defaultDocs.length;
+}
+
+export async function deleteDocument(
+  id: string,
+  userId: string,
+): Promise<boolean> {
+  const doc = db
+    .select()
+    .from(documents)
+    .where(and(eq(documents.id, id), eq(documents.userId, userId)))
+    .get();
+  if (!doc) return false;
+
+  // Delete all blocks and embeddings (CASCADE handles this, but explicit is clearer)
+  db.delete(blockEmbeddings)
+    .where(
+      eq(
+        blockEmbeddings.blockId,
+        db
+          .select({ id: blocks.id })
+          .from(blocks)
+          .where(eq(blocks.documentId, id)),
+      ),
+    )
+    .run();
+  db.delete(blocks).where(eq(blocks.documentId, id)).run();
+  db.delete(documents).where(eq(documents.id, id)).run();
+  return true;
+}
+
+export async function updateDocument(
+  id: string,
+  userId: string,
+  updates: { title?: string; emoji?: string },
+): Promise<boolean> {
+  const doc = db
+    .select()
+    .from(documents)
+    .where(and(eq(documents.id, id), eq(documents.userId, userId)))
+    .get();
+  if (!doc) return false;
+
+  db.update(documents)
+    .set({
+      ...(updates.title !== undefined && { title: updates.title }),
+      ...(updates.emoji !== undefined && { emoji: updates.emoji }),
+      lastAccessedAt: Date.now(),
+    })
+    .where(eq(documents.id, id))
+    .run();
+  return true;
 }
 
 export async function updateBlock(
@@ -284,4 +446,99 @@ export async function reorderBlocks(
         .run();
     }
   });
+}
+
+// ─── Chat history queries ───
+
+export async function createChatSession(
+  id: string,
+  userId: string,
+  title: string,
+): Promise<void> {
+  const now = Date.now();
+  db.insert(chatSessions)
+    .values({
+      id,
+      userId,
+      title,
+      createdAt: now,
+      updatedAt: now,
+    })
+    .run();
+}
+
+export async function getChatSessions(userId: string) {
+  return db
+    .select()
+    .from(chatSessions)
+    .where(eq(chatSessions.userId, userId))
+    .orderBy(desc(chatSessions.updatedAt))
+    .all();
+}
+
+export async function getChatSession(id: string, userId: string) {
+  return db
+    .select()
+    .from(chatSessions)
+    .where(and(eq(chatSessions.id, id), eq(chatSessions.userId, userId)))
+    .get();
+}
+
+export async function updateChatSessionTitle(
+  id: string,
+  userId: string,
+  title: string,
+): Promise<void> {
+  db.update(chatSessions)
+    .set({ title, updatedAt: Date.now() })
+    .where(and(eq(chatSessions.id, id), eq(chatSessions.userId, userId)))
+    .run();
+}
+
+export async function deleteChatSession(
+  id: string,
+  userId: string,
+): Promise<boolean> {
+  const session = db
+    .select()
+    .from(chatSessions)
+    .where(and(eq(chatSessions.id, id), eq(chatSessions.userId, userId)))
+    .get();
+  if (!session) return false;
+
+  db.delete(chatMessages).where(eq(chatMessages.sessionId, id)).run();
+  db.delete(chatSessions).where(eq(chatSessions.id, id)).run();
+  return true;
+}
+
+export async function addChatMessage(
+  id: string,
+  sessionId: string,
+  role: string,
+  content: string,
+): Promise<void> {
+  db.insert(chatMessages)
+    .values({
+      id,
+      sessionId,
+      role,
+      content,
+      createdAt: Date.now(),
+    })
+    .run();
+
+  // Update session's updatedAt
+  db.update(chatSessions)
+    .set({ updatedAt: Date.now() })
+    .where(eq(chatSessions.id, sessionId))
+    .run();
+}
+
+export async function getChatMessages(sessionId: string) {
+  return db
+    .select()
+    .from(chatMessages)
+    .where(eq(chatMessages.sessionId, sessionId))
+    .orderBy(asc(chatMessages.createdAt))
+    .all();
 }

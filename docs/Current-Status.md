@@ -3,9 +3,9 @@
 ## 1. 项目基本信息
 
 - **项目名称**：ai-note
-- **当前阶段**：阶段三全部完成；阶段四全部完成（拖拽排序 ✅ + AI 局部重写 ✅ + 知识网络 ✅ + 收尾打磨 ✅ + 暗色模式 ✅）；阶段五 RAG + Citations 已完成；阶段六真实数据层已完成；阶段七语义向量检索已完成
-- **当前重心**：阶段七 Qwen3 Embedding 语义搜索已交付，RAG 检索从 TF-IDF 升级为语义向量
-- **上次更新时间**：2026-05-28
+- **当前阶段**：阶段三全部完成；阶段四全部完成（拖拽排序 ✅ + AI 局部重写 ✅ + 知识网络 ✅ + 收尾打磨 ✅ + 暗色模式 ✅）；阶段五 RAG + Citations 已完成；阶段六真实数据层已完成；阶段七语义向量检索已完成；阶段八用户认证已完成；笔记增删 + AI 对话持久化已完成
+- **当前重心**：新增笔记创建/删除功能，AI 对话历史持久化，演示账户自动填充
+- **上次更新时间**：2026-05-29
 
 ## 2. 已完成里程碑 (Completed)
 
@@ -57,10 +57,14 @@
 - [x] **段落持久化修复**：`RichTextEditor` 保存时 `getText()` → `getHTML()` 保留 `<p>` 标签；加载时 `ensureHtml()` 将旧纯文本自动转为 HTML 段落（向后兼容）；AI rewrite 流式阶段逐块 `insertContent` 保持实时反馈，流结束后替换为正确 `<p>` HTML；新建 `strip-html.ts` 工具函数（`stripHtml` + `ensureHtml`），AI 上下文注入、RAG 分词、wikilink 解析均用 `stripHtml` 清理 HTML。
 - [x] **语义向量检索完成（任务 7.1）**：TF-IDF 关键词匹配替换为 Qwen3 Embedding 语义搜索。新建 `src/lib/embedding.ts`（DashScope embedding 客户端）+ `src/lib/embedding-store.ts`（SQLite BLOB 向量存储 + 余弦相似度 + 启动 backfill + 语义搜索）；`retrieval.ts` 改为 `searchNotes` 调用语义搜索；`queries.ts` 挂载 embedding 到 update/add/delete 路径（fire-and-forget）；chat route 删除全量加载改为直接语义搜索；`DndContext` 添加稳定 id 修复 SSR hydration mismatch。build + 22 tests 全部通过。
 - [x] **种子数据扩充 + 项目文档补全**：种子数据从 5 篇扩充到 9 篇（60+ 区块），新增 TypeScript 类型体操、语义向量检索、SQLite 架构、暗色模式 4 篇笔记，现有笔记大幅扩充内容与 wikilink 交叉引用。新建 4 篇项目文档：Database-Architecture.md、AI-RAG-Architecture.md、Development-Guide.md、API-Reference.md。
+- [x] **用户认证完成（任务 8.1）**：自定义认证系统实现。新建 `src/lib/auth.ts`（bcryptjs 密码加密 + jose JWT 签发/验证 + httpOnly cookie session 管理）；`src/db/schema.ts` 新增 `users` 表 + `documents.userId` 外键；`src/db/migrate.ts` 处理已有数据库迁移（ALTER TABLE + 默认用户分配）；`src/db/queries.ts` 新增用户 CRUD 函数 + 所有文档查询添加 userId 过滤；`src/actions/note.ts` 所有 Server Action 添加 `requireAuth()` 认证检查；`middleware.ts` 保护 `/app/*` 路由 + 已登录用户重定向；4 个认证 API 路由（register/login/logout/me）；登录/注册页面（`(auth)` 路由组）；`AppShell` 侧边栏添加用户信息 + 登出按钮；`/api/chat` 和 `/api/rewrite` 添加认证保护。需配置 `AUTH_SECRET` 环境变量。
+- [x] **笔记新增/删除功能**：`AppShell` 侧边栏添加"新建笔记"按钮（`FilePlus` 图标）+ 笔记列表项 hover 显示删除按钮（`Trash2` 图标）；`src/db/queries.ts` 新增 `createDocument` 和 `deleteDocument` 函数；`src/actions/note.ts` 新增 `createNote` 和 `deleteNote` Server Actions；新建笔记自动创建默认空段落区块；删除笔记前二次确认。
+- [x] **AI 对话历史持久化**：`src/db/schema.ts` 新增 `chat_sessions` 和 `chat_messages` 表；`src/db/queries.ts` 新增对话 CRUD 函数（createChatSession/getChatSessions/getChatMessages/addChatMessage 等）；3 个 API 路由（`/api/chat/sessions`、`/api/chat/sessions/[id]`、`/api/chat/sessions/[id]/messages`）；`ChatPanel` 集成对话列表选择器 + 新建对话按钮 + 删除对话功能；消息自动持久化到数据库。
+- [x] **演示账户自动填充**：登录页面添加"使用演示账户"按钮，点击自动填充 admin@test.com / admin123。
 
 ## 3. 进行中的任务 (In Progress)
 
-- 阶段六真实数据层已完成，数据已持久化至 SQLite
+- 阶段八用户认证已完成
 
 ## 4. 下一阶段任务派发 (Next Steps)
 
@@ -78,8 +82,8 @@
 
 ## 5. 关键备注 (Context Memo)
 
-- **当前进展结论**：阶段七已完成，RAG 检索从 TF-IDF 升级为 Qwen3 Embedding 语义向量搜索。Embedding 存储在 SQLite BLOB 中，区块保存时增量更新，启动时幂等 backfill。
-- **下一步方向**：可考虑用户认证、协作编辑、多模态输入、移动端适配等。需配置 `DASHSCOPE_API_KEY` 才能启用语义搜索。
+- **当前进展结论**：阶段八已完成，用户认证系统已交付。邮箱密码登录 + JWT Session（jose 库）+ 按用户隔离数据。密码使用 bcryptjs 加密，JWT 存储在 httpOnly cookie（7 天有效期）。middleware 保护 /app/* 路由，未登录重定向到 /login。
+- **下一步方向**：可考虑协作编辑、多模态输入、移动端适配、OAuth 社交登录等。需配置 `AUTH_SECRET` 环境变量才能启用认证。
 
 ## 6. 技术栈接入状态澄清
 

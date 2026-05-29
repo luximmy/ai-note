@@ -3,6 +3,7 @@ import { drizzle } from 'drizzle-orm/better-sqlite3';
 import * as schema from './schema';
 import path from 'node:path';
 import fs from 'node:fs';
+import { migrateDatabase } from './migrate';
 
 // Use globalThis singleton to avoid multiple connections during Next.js build
 const globalForDb = globalThis as unknown as {
@@ -24,8 +25,17 @@ function getDb() {
     sqlite.pragma('busy_timeout = 10000');
 
     sqlite.exec(`
+      CREATE TABLE IF NOT EXISTS users (
+        id TEXT PRIMARY KEY,
+        email TEXT NOT NULL UNIQUE,
+        password_hash TEXT NOT NULL,
+        name TEXT NOT NULL,
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL
+      );
       CREATE TABLE IF NOT EXISTS documents (
         id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
         title TEXT NOT NULL,
         emoji TEXT,
         cover_image TEXT,
@@ -49,7 +59,24 @@ function getDb() {
         embedding BLOB NOT NULL,
         updated_at INTEGER NOT NULL
       );
+      CREATE TABLE IF NOT EXISTS chat_sessions (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        title TEXT NOT NULL,
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL
+      );
+      CREATE TABLE IF NOT EXISTS chat_messages (
+        id TEXT PRIMARY KEY,
+        session_id TEXT NOT NULL REFERENCES chat_sessions(id) ON DELETE CASCADE,
+        role TEXT NOT NULL,
+        content TEXT NOT NULL,
+        created_at INTEGER NOT NULL
+      );
     `);
+
+    // Run migrations for existing databases
+    migrateDatabase(sqlite);
 
     globalForDb.__aiNoteSqlite = sqlite;
     globalForDb.__aiNoteDb = drizzle(sqlite, { schema });

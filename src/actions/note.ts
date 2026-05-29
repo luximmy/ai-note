@@ -8,20 +8,66 @@ import {
   extractContext,
 } from '@/lib/wikilink-parser';
 import { stripHtml } from '@/lib/strip-html';
+import { getSession } from '@/lib/auth';
 import {
   getDocumentById as getDocFromDb,
   getAllDocumentsWithBlocks,
+  createDocument,
+  deleteDocument,
+  updateDocument,
   updateBlock,
   addBlock,
   deleteBlock,
   reorderBlocks,
 } from '@/db/queries';
+import { randomUUID } from 'node:crypto';
+
+async function requireAuth(): Promise<string> {
+  const session = await getSession();
+  if (!session) {
+    throw new Error('未登录');
+  }
+  return session.userId;
+}
+
+/**
+ * 创建新笔记
+ */
+export async function createNote(
+  title: string = '无标题笔记',
+  emoji?: string,
+): Promise<{ id: string }> {
+  const userId = await requireAuth();
+  const id = randomUUID();
+  await createDocument(id, userId, title, emoji);
+  return { id };
+}
+
+/**
+ * 删除笔记
+ */
+export async function deleteNote(id: string): Promise<boolean> {
+  const userId = await requireAuth();
+  return deleteDocument(id, userId);
+}
+
+/**
+ * 更新笔记标题和图标
+ */
+export async function updateNote(
+  id: string,
+  updates: { title?: string; emoji?: string },
+): Promise<boolean> {
+  const userId = await requireAuth();
+  return updateDocument(id, userId, updates);
+}
 
 /**
  * 获取单篇笔记详情
  */
 export async function getNoteById(id: string): Promise<Document> {
-  const note = await getDocFromDb(id);
+  const userId = await requireAuth();
+  const note = await getDocFromDb(id, userId);
   if (!note) {
     throw new Error('404 - 笔记未找到');
   }
@@ -36,6 +82,7 @@ export async function updateBlockAction(
   blockId: string,
   updatedBlock: Partial<Block>,
 ) {
+  await requireAuth();
   await updateBlock(noteId, blockId, updatedBlock);
   return { success: true, timestamp: Date.now() };
 }
@@ -48,6 +95,7 @@ export async function addBlockAction(
   afterBlockId: string,
   newBlock: Block,
 ) {
+  await requireAuth();
   await addBlock(noteId, afterBlockId, newBlock);
   return {
     success: true,
@@ -60,6 +108,7 @@ export async function addBlockAction(
  * 删除区块
  */
 export async function deleteBlockAction(noteId: string, blockId: string) {
+  await requireAuth();
   await deleteBlock(noteId, blockId);
   return { success: true, timestamp: Date.now() };
 }
@@ -68,6 +117,7 @@ export async function deleteBlockAction(noteId: string, blockId: string) {
  * 重排区块
  */
 export async function reorderBlocksAction(noteId: string, blockIds: string[]) {
+  await requireAuth();
   await reorderBlocks(noteId, blockIds);
   return { success: true, timestamp: Date.now() };
 }
@@ -76,7 +126,8 @@ export async function reorderBlocksAction(noteId: string, blockIds: string[]) {
  * 获取知识图谱数据（节点 + 边）
  */
 export async function getGraphData(): Promise<GraphData> {
-  const allDocs = await getAllDocumentsWithBlocks();
+  const userId = await requireAuth();
+  const allDocs = await getAllDocumentsWithBlocks(userId);
 
   const nodes: GraphNode[] = allDocs.map((doc) => ({
     id: doc.id,
@@ -114,7 +165,8 @@ export async function getGraphData(): Promise<GraphData> {
  * 获取指定笔记的所有反向链接
  */
 export async function getBacklinksForNote(noteId: string): Promise<Wikilink[]> {
-  const allDocs = await getAllDocumentsWithBlocks();
+  const userId = await requireAuth();
+  const allDocs = await getAllDocumentsWithBlocks(userId);
   const targetDoc = allDocs.find((d) => d.id === noteId);
   if (!targetDoc) return [];
 

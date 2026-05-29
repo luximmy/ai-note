@@ -1,6 +1,7 @@
 // src/app/api/rewrite/route.ts
 import { createOpenAI } from '@ai-sdk/openai';
 import { streamText } from 'ai';
+import { getSession } from '@/lib/auth';
 
 export const runtime = 'edge';
 export const maxDuration = 30;
@@ -12,7 +13,15 @@ const deepseek = createOpenAI({
 
 export async function POST(req: Request) {
   try {
-    // 接收要修改的文本、指令动作（如“扩写”）、以及当前笔记上下文
+    const session = await getSession();
+    if (!session) {
+      return new Response(
+        JSON.stringify({ error: '未登录' }),
+        { status: 401, headers: { 'Content-Type': 'application/json' } },
+      );
+    }
+
+    // 接收要修改的文本、指令动作（如”扩写”）、以及当前笔记上下文
     const { text, instruction, context } = await req.json();
 
     const systemPrompt = `

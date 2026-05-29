@@ -3,6 +3,8 @@ import { getNoteById } from '@/actions/note';
 import { notFound } from 'next/navigation';
 import { BlockRenderer } from '@/components/editor/BlockRenderer';
 import { BacklinksPanel } from '@/components/knowledge/BacklinksPanel';
+import { NoteHeader } from '@/components/note/NoteHeader';
+import { getSession } from '@/lib/auth';
 import { getAllDocumentsMeta } from '@/db/queries';
 import { Document } from '@/types';
 
@@ -24,16 +26,16 @@ export default async function NotePage({ params }: NotePageProps) {
     throw error;
   }
 
-  const documentsMeta = await getAllDocumentsMeta();
+  const session = await getSession();
+  const documentsMeta = session ? await getAllDocumentsMeta(session.userId) : [];
 
   return (
     <article className='space-y-8 pb-32'>
-      <header className='space-y-4'>
-        <div className='text-5xl'>{note.emoji || '📝'}</div>
-        <h1 className='text-4xl font-bold tracking-tight text-foreground'>
-          {note.title}
-        </h1>
-      </header>
+      <NoteHeader
+        noteId={id}
+        title={note.title}
+        emoji={note.emoji}
+      />
 
       <section className='min-h-[500px] border-t pt-8'>
         <BlockRenderer

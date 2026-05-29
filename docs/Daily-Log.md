@@ -1,3 +1,44 @@
+# 2026-05-29 工作日志
+
+## 用户认证 + 笔记管理 + AI 对话持久化 ✅
+
+**目标**：实现用户认证系统、笔记增删改查、AI 对话历史管理。
+
+**实现内容**：
+
+1. **用户认证系统**
+   - `src/lib/auth.ts`（新建）— 密码加密（bcryptjs）+ JWT 签发/验证（jose）+ httpOnly cookie session 管理
+   - `src/db/schema.ts` — 新增 `users` 表 + `documents.userId` 外键
+   - `src/db/migrate.ts`（新建）— 处理已有数据库迁移（ALTER TABLE + 默认用户分配）
+   - `middleware.ts`（新建）— 路由保护，/app/* 未登录重定向到 /login
+   - `src/app/api/auth/`（新建）— register/login/logout/me 四个 API
+   - `src/app/(auth)/`（新建）— 登录/注册页面 + 演示账户自动填充按钮
+
+2. **笔记增删改查**
+   - `src/db/queries.ts` — 新增 createDocument/deleteDocument/updateDocument 函数
+   - `src/actions/note.ts` — 新增 createNote/deleteNote/updateNote Server Actions
+   - `src/components/layout/AppShell.tsx` — 侧边栏添加新建/删除按钮，乐观更新 UI
+   - `src/components/note/NoteHeader.tsx`（新建）— 笔记标题和 emoji 图标编辑组件
+   - `src/components/ui/confirm-dialog.tsx`（新建）— 美观的删除确认对话框
+
+3. **AI 对话历史持久化**
+   - `src/db/schema.ts` — 新增 `chat_sessions` 和 `chat_messages` 表
+   - `src/app/api/chat/sessions/`（新建）— 对话 CRUD API
+   - `src/components/ai/ChatPanel.tsx` — 集成对话列表、自动命名、编辑名称功能
+
+4. **数据隔离**
+   - 所有文档查询添加 userId 过滤
+   - Server Actions 添加 requireAuth() 认证检查
+   - /api/chat 和 /api/rewrite 添加认证保护
+
+**技术决策**：
+- 选择 JWT 无状态方案（jose 库），兼容 Edge Runtime
+- 使用 bcryptjs 纯 JS 实现，避免 native binding 问题
+- 对话自动命名取第一条消息前 30 字符
+- 删除确认使用 shadcn Dialog 替代浏览器 confirm
+
+---
+
 # 2026-05-28 工作日志
 
 ## 真实数据层：Mock → SQLite + Drizzle ORM ✅

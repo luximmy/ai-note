@@ -41,6 +41,9 @@ importers:
       ai:
         specifier: ^6.0.168
         version: 6.0.168(zod@4.3.6)
+      bcryptjs:
+        specifier: ^3.0.3
+        version: 3.0.3
       better-sqlite3:
         specifier: ^12.10.0
         version: 12.10.0
@@ -56,6 +59,9 @@ importers:
       drizzle-orm:
         specifier: ^0.45.2
         version: 0.45.2(@opentelemetry/api@1.9.0)(@types/better-sqlite3@7.6.13)(better-sqlite3@12.10.0)
+      jose:
+        specifier: ^6.2.3
+        version: 6.2.3
       lucide-react:
         specifier: ^1.8.0
         version: 1.8.0(react@19.2.4)
@@ -114,6 +120,9 @@ importers:
       '@testing-library/user-event':
         specifier: ^14.6.1
         version: 14.6.1(@testing-library/dom@10.4.1)
+      '@types/bcryptjs':
+        specifier: ^3.0.0
+        version: 3.0.0
       '@types/better-sqlite3':
         specifier: ^7.6.13
         version: 7.6.13
@@ -2398,6 +2407,10 @@ packages:
   '@types/aria-query@5.0.4':
     resolution: {integrity: sha512-rfT93uj5s0PRL7EzccGMs3brplhcrghnDoV26NqKhCAS1hVo+WdNsPvE/yb6ilfr5hi2MEk6d5EWJTKdxg8jVw==}
 
+  '@types/bcryptjs@3.0.0':
+    resolution: {integrity: sha512-WRZOuCuaz8UcZZE4R5HXTco2goQSI2XxjGY3hbM/xDvwmqFWd4ivooImsMx65OKM6CtNKbnZ5YL+YwAwK7c1dg==}
+    deprecated: This is a stub types definition. bcryptjs provides its own type definitions, so you do not need this installed.
+
   '@types/better-sqlite3@7.6.13':
     resolution: {integrity: sha512-NMv9ASNARoKksWtsq/SHakpYAYnhBrQgGD8zkLYk/jaK8jUGn08CfEdTRgYhMypUQAfzSP8W6gNLe0q19/t4VA==}
 
@@ -2804,6 +2817,10 @@ packages:
   baseline-browser-mapping@2.10.20:
     resolution: {integrity: sha512-1AaXxEPfXT+GvTBJFuy4yXVHWJBXa4OdbIebGN/wX5DlsIkU0+wzGnd2lOzokSk51d5LUmqjgBLRLlypLUqInQ==}
     engines: {node: '>=6.0.0'}
+    hasBin: true
+
+  bcryptjs@3.0.3:
+    resolution: {integrity: sha512-GlF5wPWnSa/X5LKM1o0wz0suXIINz1iHRLvTS+sLyi7XPbe5ycmYI3DlZqVGZZtDgl4DmasFg7gOB3JYbphV5g==}
     hasBin: true
 
   better-sqlite3@12.10.0:
@@ -4070,8 +4087,8 @@ packages:
     resolution: {integrity: sha512-ekilCSN1jwRvIbgeg/57YFh8qQDNbwDb9xT/qu2DAHbFFZUicIl4ygVaAvzveMhMVr3LnpSKTNnwt8PoOfmKhQ==}
     hasBin: true
 
-  jose@6.2.2:
-    resolution: {integrity: sha512-d7kPDd34KO/YnzaDOlikGpOurfF0ByC2sEV4cANCtdqLlTfBlw2p14O/5d/zv40gJPbIQxfES3nSx1/oYNyuZQ==}
+  jose@6.2.3:
+    resolution: {integrity: sha512-YYVDInQKFJfR/xa3ojUTl8c2KoTwiL1R5Wg9YCydwH0x0B9grbzlg5HC7mMjCtUJjbQ/YnGEZIhI5tCgfTb4Hw==}
 
   js-tokens@4.0.0:
     resolution: {integrity: sha512-RdJUflcE3cUzKiMqQgsCu06FPu9UdIJO0beYbPhHN4k6apgJtifcoCtT9bcxOpYBtpD2kCM6Sbzg4CausW/PKQ==}
@@ -6541,7 +6558,7 @@ snapshots:
       express: 5.2.1
       express-rate-limit: 8.3.2(express@5.2.1)
       hono: 4.12.14
-      jose: 6.2.2
+      jose: 6.2.3
       json-schema-typed: 8.0.2
       pkce-challenge: 5.0.1
       raw-body: 3.0.2
@@ -7746,6 +7763,10 @@ snapshots:
 
   '@types/aria-query@5.0.4': {}
 
+  '@types/bcryptjs@3.0.0':
+    dependencies:
+      bcryptjs: 3.0.3
+
   '@types/better-sqlite3@7.6.13':
     dependencies:
       '@types/node': 20.19.39
@@ -8160,6 +8181,8 @@ snapshots:
   base64-js@1.5.1: {}
 
   baseline-browser-mapping@2.10.20: {}
+
+  bcryptjs@3.0.3: {}
 
   better-sqlite3@12.10.0:
     dependencies:
@@ -9555,7 +9578,7 @@ snapshots:
 
   jiti@2.6.1: {}
 
-  jose@6.2.2: {}
+  jose@6.2.3: {}
 
   js-tokens@4.0.0: {}
 

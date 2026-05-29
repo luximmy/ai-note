@@ -2,25 +2,86 @@
 
 import { useAppStore } from '@/store';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { ChatPanel } from '@/components/ai/ChatPanel';
-import { Network } from 'lucide-react';
+import { FilePlus, LogOut, Network, Trash2, User } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { createNote, deleteNote } from '@/actions/note';
+
+interface DocumentMeta {
+  id: string;
+  title: string;
+  emoji?: string;
+}
 
 interface AppShellProps {
-  documents: { id: string; title: string; emoji?: string }[];
+  documents: DocumentMeta[];
+  user: { name: string; email: string };
   children: React.ReactNode;
 }
 
-export function AppShell({ documents, children }: AppShellProps) {
+export function AppShell({ documents: initialDocuments, user, children }: AppShellProps) {
   const { isSidebarOpen, isAgentPanelOpen } = useAppStore();
   const pathname = usePathname();
+  const router = useRouter();
   const isGraphPage = pathname === '/app/graph';
 
+  const [documents, setDocuments] = useState(initialDocuments);
   const [agentPanelWidth, setAgentPanelWidth] = useState(320);
+  const [creating, setCreating] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; title: string } | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const isDraggingRef = useRef(false);
+
+  // Sync with server state when initialDocuments changes
+  useEffect(() => {
+    setDocuments(initialDocuments);
+  }, [initialDocuments]);
+
+  async function handleLogout() {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+      router.push('/login');
+      router.refresh();
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
+  }
+
+  async function handleCreateNote() {
+    if (creating) return;
+    setCreating(true);
+    try {
+      const { id } = await createNote('无标题笔记', '📝');
+      const newDoc: DocumentMeta = { id, title: '无标题笔记', emoji: '📝' };
+      setDocuments((prev) => [...prev, newDoc]);
+      router.push(`/app/note/${id}`);
+    } catch (error) {
+      console.error('Create note failed:', error);
+    } finally {
+      setCreating(false);
+    }
+  }
+
+  async function handleConfirmDelete() {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      await deleteNote(deleteTarget.id);
+      setDocuments((prev) => prev.filter((d) => d.id !== deleteTarget.id));
+      if (pathname === `/app/note/${deleteTarget.id}`) {
+        router.push('/app');
+      }
+    } catch (error) {
+      console.error('Delete note failed:', error);
+    } finally {
+      setDeleting(false);
+      setDeleteTarget(null);
+    }
+  }
 
   useEffect(() => {
     const handlePointerMove = (e: PointerEvent) => {
@@ -71,29 +132,72 @@ export function AppShell({ documents, children }: AppShellProps) {
                 知识图谱
               </Link>
 
-              <div className='text-xs font-medium text-muted-foreground py-2 px-2 pt-4'>
-                最近笔记
+              <div className='flex items-center justify-between py-2 px-2 pt-4'>
+                <span className='text-xs font-medium text-muted-foreground'>
+                  最近笔记
+                </span>
+                <button
+                  onClick={handleCreateNote}
+                  disabled={creating}
+                  className='rounded-md p-1 text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+                  title='新建笔记'
+                >
+                  <FilePlus className='h-4 w-4' />
+                </button>
               </div>
               {documents.map((doc) => {
                 const href = `/app/note/${doc.id}`;
                 const isActive = pathname === href;
                 return (
-                  <Link
+                  <div
                     key={doc.id}
-                    href={href}
-                    className={`block px-2 py-1.5 text-sm rounded-md transition-colors ${
+                    className={`group flex items-center justify-between px-2 py-1.5 text-sm rounded-md transition-colors ${
                       isActive
                         ? 'bg-sidebar-accent font-medium text-sidebar-accent-foreground'
                         : 'hover:bg-sidebar-accent text-sidebar-foreground/70'
                     }`}
                   >
-                    <span className='mr-2'>{doc.emoji || '📄'}</span>
-                    {doc.title}
-                  </Link>
+                    <Link href={href} className='flex-1 min-w-0 truncate'>
+                      <span className='mr-2'>{doc.emoji || '📄'}</span>
+                      {doc.title}
+                    </Link>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        setDeleteTarget({ id: doc.id, title: doc.title });
+                      }}
+                      className='rounded p-1 opacity-0 group-hover:opacity-100 text-muted-foreground hover:bg-destructive/10 hover:text-destructive'
+                      title='删除笔记'
+                    >
+                      <Trash2 className='h-3 w-3' />
+                    </button>
+                  </div>
                 );
               })}
             </div>
           </ScrollArea>
+
+          <div className='border-t p-3'>
+            <div className='flex items-center gap-3'>
+              <div className='flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary'>
+                <User className='h-4 w-4' />
+              </div>
+              <div className='flex-1 min-w-0'>
+                <p className='text-sm font-medium truncate'>{user.name}</p>
+                <p className='text-xs text-muted-foreground truncate'>
+                  {user.email}
+                </p>
+              </div>
+              <button
+                onClick={handleLogout}
+                className='rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+                title='登出'
+              >
+                <LogOut className='h-4 w-4' />
+              </button>
+            </div>
+          </div>
         </aside>
       )}
 
@@ -133,6 +237,17 @@ export function AppShell({ documents, children }: AppShellProps) {
           </div>
         </aside>
       )}
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        title="删除笔记"
+        description={`确定要删除「${deleteTarget?.title}」吗？此操作不可撤销。`}
+        confirmText="删除"
+        variant="destructive"
+        onConfirm={handleConfirmDelete}
+        loading={deleting}
+      />
     </div>
   );
 }
