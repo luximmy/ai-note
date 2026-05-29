@@ -1,6 +1,6 @@
 # ai-note 项目技术深度解析
 
-> 更新时间：2026-05-29
+> 更新时间：2026-05-29（第二版：补充代码走读）
 
 ## 1. 项目概览
 
@@ -316,3 +316,565 @@ async function requireAuth(): Promise<string> {
 8. **Tiptap `immediatelyRender: false`**：避免 SSR hydration mismatch
 9. **DecorationSet.map**：wikilink 装饰器增量更新，避免全文档重扫
 10. **globalThis 单例**：SQLite 连接防多 worker 重复打开
+
+---
+
+## 10. 代码走读：核心文件逐行理解
+
+> 本节是面试准备的核心。每个模块从入口开始，逐步拆解关键代码，标注行号，解释"这行在做什么"和"为什么要这样做"。
+
+### 10.1 BlockRenderer.tsx — 编辑器的大脑
+
+**文件**：`src/components/editor/BlockRenderer.tsx`（567 行）
+**职责**：管理所有区块的状态、保存、回滚、拖拽、插入
+
+#### 核心状态（第 87-101 行）
+
+```
+第 87 行  const [blocks, setBlocks] = useState<Block[]>(initialBlocks);
+第 88 行  const blocksRef = useRef<Block[]>(initialBlocks);
+第 89 行  const [safeSnapshot, setSafeSnapshot] = useState<Block[]>(initialBlocks);
+第 90 行  const safeSnapshotRef = useRef<Block[]>(initialBlocks);
+```
+
+**理解要点**：
+- `blocks` 是"前缓冲"——用户看到的 UI，每次按键立即更新
+- `safeSnapshot` 是"后缓冲"——最后一次服务端确认的状态，用于失败回滚
+- 每个 state 都有一个对应的 ref（第 88、90 行）。**为什么要 ref？** 因为 setTimeout 的闭包和事件回调中读不到最新的 state（React 的 state 是快照），ref 永远指向最新值
+
+```
+第 98 行  const requestSeqRef = useRef(0);
+第 100 行 const lastResolvedVersionRef = useRef<Record<string, number>>({});
+```
+
+**理解要点**：
+- `requestSeqRef` 是"发号器"——每次发请求前 +1，生成一个递增的序列号
+- `lastResolvedVersionRef` 是"记录本"——记录每个 block 最后一次成功保存的序列号
+- 这两个配合实现乱序防护：如果收到的响应序列号比记录的小，说明是过期响应，丢弃
+
+#### 上下文同步（第 103-119 行）
+
+```
+第 103 行 useEffect(() => {
+第 104 行   const contextText = blocks.map((b) => {
+第 105 行     const text = stripHtml(b.content || '');
+第 106 行     if (b.type === 'todo')
+第 107 行       return `[${b.attributes?.checked ? 'x' : ' '}] ${text}`;
+           // ... 其他类型的格式化
+第 118 行   setNoteContext(`当前文档内容如下：\n\n${contextText}`);
+第 119 行 }, [blocks, setNoteContext]);
+```
+
+**理解要点**：
+- 每次 blocks 变化，把所有区块内容序列化成纯文本，写入 Zustand 的 `noteContext`
+- AI 聊天时会读取 `noteContext` 注入到 System Prompt，让 AI 知道用户当前在看什么
+- 不同类型有不同格式：todo 显示 `[x]`/`[ ]`，heading 显示 `#`，code 显示 ` ``` `
+
+#### 保存流程：updateBlockData（第 225-277 行）
+
+```
+第 225 行 const updateBlockData = useCallback((id: string, updates: Partial<Block>) => {
+第 227 行   // 第一步：立即更新前缓冲（用户立刻看到变化）
+第 227 行   setBlocks((prevBlocks) =>
+第 228 行     prevBlocks.map((block) => {
+第 229 行       if (block.id === id) {
+第 230 行         return { ...block, ...updates,
+第 233 行           attributes: { ...(block.attributes || {}), ...(updates.attributes || {}) }
+第 235 行         } as Block;
+             }
+             return block;
+           }),
+         );
+```
+
+**理解要点**：
+- 这是用户每次按键的入口。比如用户在段落中打了一个字，ParagraphBlock 的 Tiptap 触发 `onUpdate`，调用这个函数
+- 第一步是立即更新 `blocks`（前缓冲），用户立刻看到新内容
+- attributes 用展开运算符合并，保留旧属性只更新变化的部分
+
+```
+第 243 行   // 第二步：合并到 pendingUpdates（防抖缓冲区）
+第 243 行   const currentPending = pendingUpdatesRef.current[id] || {};
+第 249 行   pendingUpdatesRef.current[id] = {
+              ...currentPending, ...updates,
+              ...(Object.keys(mergedAttributes).length > 0 ? { attributes: mergedAttributes } : {}),
+            } as Partial<Block>;
+```
+
+**理解要点**：
+- `pendingUpdatesRef` 是一个"待发送缓冲区"，每次按键把更新合并进去
+- 如果用户快速打了 5 个字，5 次更新会被合并成一个，只发一次请求
+
+```
+第 257 行   // 第三步：重置防抖定时器
+第 257 行   if (timersRef.current[id]) {
+第 258 行     clearTimeout(timersRef.current[id]);
+            }
+第 261 行   timersRef.current[id] = setTimeout(() => {
+第 262 行     const finalUpdates = pendingUpdatesRef.current[id];
+第 263 行     if (finalUpdates) {
+第 265 行       requestSeqRef.current += 1;      // 发号器 +1
+第 266 行       const currentSeq = requestSeqRef.current; // 捕获到闭包中
+第 269 行       commitBlockUpdate(id, finalUpdates, currentSeq); // 发送请求
+              }
+              delete timersRef.current[id];
+              delete pendingUpdatesRef.current[id];
+第 274 行   }, 800); // 800ms 防抖
+```
+
+**理解要点**：
+- 每次按键都清除旧定时器、设置新定时器。只有停止打字 800ms 后才真正发请求
+- 第 265-266 行是关键：在发请求前生成序列号，并捕获在闭包中。这样即使后续有更新的请求先完成，这个旧请求的回调仍然能用自己当时的序列号做比较
+
+#### 保存结果处理：commitBlockUpdate（第 144-223 行）
+
+```
+第 144 行 const commitBlockUpdate = useCallback(
+            async (blockId: string, updates: Partial<Block>, currentSeq: number) => {
+第 147 行   const result = await updateBlockAction(noteId, blockId, updates);
+第 149 行   if (result.success) {
+第 151 行     const lastResolved = lastResolvedVersionRef.current[blockId] || 0;
+第 153 行     if (currentSeq < lastResolved) {
+                // 过期响应！丢弃
+                emitSaveEvent({ type: 'out_of_order', ... });
+                return;
+              }
+第 166 行     lastResolvedVersionRef.current[blockId] = currentSeq; // 更新记录本
+第 169 行     setSafeSnapshot((prev) =>                   // 推进安全快照
+                prev.map((b) => b.id === blockId ? { ...b, ...updates } : b)
+              );
+              }
+```
+
+**理解要点**：
+- 第 153 行是乱序防护的核心：`currentSeq < lastResolved` 意味着"在我等待网络响应的这段时间里，已经有更新的请求成功了，所以我这个响应是过期的"
+- 如果不是过期的，更新记录本（第 166 行）并推进安全快照（第 169 行）
+- **类比**：就像排队叫号，你拿到的是 5 号，但叫到你的时候发现 6 号已经处理完了，说明你的号过期了
+
+#### 失败回滚（第 192-220 行）
+
+```
+第 192 行 } catch (err) {
+第 202 行   toast.error('区块保存失败', {
+              description: '网络抖动，已自动恢复该部分内容。',
+            });
+第 207 行   setBlocks((prevBlocks) => {
+              const safeBlock = safeSnapshotRef.current.find((b) => b.id === blockId);
+              if (!safeBlock) return prevBlocks;
+              return prevBlocks.map((b) => (b.id === blockId ? safeBlock : b));
+            });
+第 215 行   setForceSyncToken((prev) => prev + 1);
+第 217 行   startTransition(() => { router.refresh(); });
+```
+
+**理解要点**：
+- 网络失败时，从 `safeSnapshot` 中找到这个 block 的最后确认版本，替换回 `blocks`
+- `forceSyncToken` +1 会传递给子组件，强制 Tiptap 编辑器重新同步内容（否则编辑器内部状态还是旧的）
+- `router.refresh()` 在 `startTransition` 中调用，让 Next.js 重新从服务端获取数据，确保 UI 和服务端一致
+- **关键细节**：只回滚失败的那个 block，不是回滚所有 block。其他 block 不受影响
+
+#### 拖拽排序（第 393-451 行）
+
+```
+第 394 行 const sensors = useSensors(
+            useSensor(PointerSensor, {
+              activationConstraint: { distance: 5 },
+            }),
+            useSensor(KeyboardSensor, { ... }),
+          );
+```
+
+**理解要点**：
+- `distance: 5` 是关键：用户必须移动鼠标 5 像素才触发拖拽。如果没有这个，用户点击编辑器时光标稍微移动就会误触拖拽
+
+```
+第 411 行 const handleDragEnd = async (event: DragEndEvent) => {
+第 416 行   const oldIndex = blocks.findIndex((b) => b.id === active.id);
+第 417 行   const newIndex = blocks.findIndex((b) => b.id === over.id);
+第 420 行   const newBlocks = arrayMove(blocks, oldIndex, newIndex);
+第 421 行   setBlocks(newBlocks);           // 乐观更新
+第 422 行   setSafeSnapshot(newBlocks);     // 结构性改变，同步推进快照
+              // ... 服务端同步，失败回滚
+```
+
+**理解要点**：
+- 拖拽和编辑不同：编辑是"先更新前缓冲，后推进后缓冲"，拖拽是"两个缓冲同时推进"
+- 因为拖拽是原子操作（要么成功要么失败），不存在"部分保存"的情况
+
+---
+
+### 10.2 RichTextEditor.tsx — 富文本编辑器
+
+**文件**：`src/components/editor/RichTextEditor.tsx`（327 行）
+**职责**：基于 Tiptap 的单个区块的富文本编辑器，处理输入、斜杠菜单、AI 重写
+
+#### Tiptap 初始化（第 79-197 行）
+
+```
+第 79 行 const editor = useEditor({
+第 80 行   immediatelyRender: false,  // 不在 SSR 时渲染（ProseMirror 是纯浏览器端的）
+第 81 行   autofocus: autoFocus ? 'end' : false,
+第 82 行   extensions: [
+第 83 行     StarterKit.configure({
+第 84 行       heading: false,     // 禁用！标题在块级别处理
+第 85 行       codeBlock: false,   // 禁用！代码块在块级别处理
+            }),
+第 87 行     Placeholder.configure({
+              placeholder: '输入内容，或输入 "/" 唤起菜单...',
+            }),
+          ],
+```
+
+**理解要点**：
+- `immediatelyRender: false`：Tiptap/ProseMirror 是浏览器端库，不能在服务端渲染。如果不加这个，Next.js SSR 会报错
+- `heading: false, codeBlock: false`：为什么禁用？因为我们的编辑器是"一个 block 一个 Tiptap 实例"，标题和代码块由专门的 HeadingBlock 和 CodeBlock 组件处理，不需要 Tiptap 内联处理
+
+#### IME 中文输入处理（第 131-141 行）
+
+```
+第 131 行 compositionstart: () => {
+            isComposingRef.current = true;
+            return false;
+          },
+第 135 行 compositionend: () => {
+            isComposingRef.current = false;
+            setTimeout(() => {
+              if (editor) onUpdateRef.current(editor.getHTML());
+            }, 0);
+            return false;
+          },
+```
+
+**理解要点**：
+- 中文输入法打字时，比如打"你好"，会先输入拼音 "nihao"，每输入一个字母都会触发 onUpdate
+- 如果每次都触发保存，会导致：保存了 "n"、"ni"、"nih"、"niha"、"nihao" 这些中间态
+- `compositionstart` 时设标志位，`onUpdate` 里检查标志位直接 return（第 194 行）
+- `compositionend` 时用 `setTimeout(0)` 延迟同步，因为浏览器在 compositionend 触发时可能还没把最终字符写入 DOM
+
+#### 斜杠菜单触发（第 143-188 行）
+
+```
+第 143 行 keydown: (view, event) => {
+第 145 行   if (isSlashMenuOpenRef.current) {
+              // 菜单开着时，上下键和回车被菜单接管
+              if (['ArrowUp', 'ArrowDown', 'Enter'].includes(event.key)) {
+                return true; // 告诉 Tiptap：我处理了，你别管
+              }
+            }
+第 161 行   if (event.key === '/' && !isComposingRef.current) {
+第 169 行     const isAtStartOfLine = $from.parentOffset === 0;
+              // 获取 / 前面的字符
+第 172 行     const charBefore = $from.parent.textContent.slice(
+                $from.parentOffset - 1, $from.parentOffset
+              );
+              // 行首或前面是空格才触发
+第 180 行     if (isAtStartOfLine || charBefore === ' ') {
+                // 打开菜单
+              }
+            }
+```
+
+**理解要点**：
+- 斜杠菜单不是 Tiptap 扩展，而是 DOM 级别的 keydown 事件拦截
+- 为什么要用 ref（`isSlashMenuOpenRef`）而不是直接读 state？因为 DOM 事件处理器是同步执行的，读不到同一个渲染周期内更新的 React state
+- `return true` 表示"我处理了这个事件"，Tiptap 就不会处理（不会移动光标）
+- `return false` 表示"我没处理"，Tiptap 正常处理（"/" 字符会被输入到编辑器中）
+
+#### AI 重写的两阶段插入（第 234-306 行）
+
+```
+第 260 行 let isFirstChunk = true;
+第 261 行 let fullText = '';
+
+第 269 行 while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            const chunk = decoder.decode(value, { stream: true });
+            fullText += chunk;
+
+第 279 行   if (isFirstChunk) {
+              editor.chain().focus().deleteRange({ from, to }).run(); // 删旧文字
+              isFirstChunk = false;
+            }
+
+第 286 行   const displayHtml = chunk.replace(/\n/g, '<br>');
+            editor.chain().focus().insertContent(displayHtml).run(); // 流式插入
+          }
+
+第 291 行 if (fullText) {
+            // 流结束后：把所有内容替换为正确的 <p> HTML
+            const endPos = editor.state.doc.content.size;
+            editor.chain().focus()
+              .deleteRange({ from, to: endPos })
+              .insertContentAt(from, toHtml(fullText))
+              .run();
+          }
+```
+
+**理解要点**：
+- **第一阶段**（流式接收中）：逐 chunk 插入，换行用 `<br>`。为什么不用 `<p>`？因为 ProseMirror 在流式插入 `<p>` 标签时会创建新的段落节点，导致光标跳动
+- **第二阶段**（流结束后）：把之前插入的所有内容删掉，替换为正确的 `<p>` HTML 段落
+- **类比**：就像先用铅笔快速写草稿（`<br>`），最后再用钢笔誊写一遍（`<p>`）
+
+---
+
+### 10.3 api/chat/route.ts — RAG + 流式对话
+
+**文件**：`src/app/api/chat/route.ts`（154 行）
+**职责**：AI 聊天的后端入口，负责 RAG 检索、System Prompt 构建、流式响应
+
+#### RAG 检索（第 32-41 行）
+
+```
+第 32 行 const lastUserMessage = [...messages].reverse()
+            .find((m) => m.role === 'user');
+第 35 行 const query = lastUserMessage?.parts
+            ?.filter((p) => p.type === 'text')
+            .map((p) => p.text)
+            .join(' ') || '';
+
+第 41 行 const sources = await searchNotes(query, 5);
+```
+
+**理解要点**：
+- 只用最后一条用户消息作为检索 query，不用整个对话历史
+- `searchNotes(query, 5)` 内部：query → Embedding 向量 → 和所有 block 向量算余弦相似度 → 取 Top 5
+
+#### System Prompt 构建（第 44-128 行）
+
+```
+第 44 行 const sourcesContext = sources.length > 0
+            ? `\n\n【检索到的相关知识片段】\n...`
+            : '';
+
+第 49 行 const citationRules = `\n【引用规则】
+            当你参考了检索到的知识片段时，请使用 [数字] 标记...`;
+
+第 55 行 const systemPrompt = `你是一个名为 Insight Note 的 AI Copilot。
+            ${sourcesContext}
+            ${citationRules}
+            【重要能力：生成交互式组件】...
+            ${noteContext ? `\n用户当前正在查看的笔记内容：\n${noteContext}` : ''}`;
+```
+
+**理解要点**：
+- System Prompt 由三部分拼接：RAG 检索结果 + 引用规则 + 当前笔记内容
+- 检索结果告诉 AI "你有这些知识可以用"，引用规则告诉 AI "用 [1] [2] 标记来源"，笔记内容告诉 AI "用户在看什么"
+- `noteContext` 来自 BlockRenderer 实时同步到 Zustand 的内容
+
+#### 流式响应（第 133-146 行）
+
+```
+第 133 行 const stream = createUIMessageStream({
+            execute: async ({ writer }) => {
+第 135 行     const result = streamText({
+                model: deepseek.chat('deepseek-v4-flash'),
+                system: systemPrompt,
+                messages: modelMessages,
+              });
+第 141 行     writer.merge(result.toUIMessageStream());
+              writer.write({ type: 'data-citations', data: sources });
+            },
+          });
+
+第 146 行 return createUIMessageStreamResponse({ stream });
+```
+
+**理解要点**：
+- `streamText` 调用 DeepSeek API，返回一个流式对象
+- `writer.merge(...)` 把 LLM 的文本流接入 UI 消息流
+- `writer.write({ type: 'data-citations', data: sources })` 在文本流结束后追加引用数据
+- 引用数据不是 LLM 生成的，是我们手动注入的。客户端解析 LLM 文本中的 `[1]` 标记，匹配这些引用数据
+
+---
+
+### 10.4 embedding-store.ts — 向量存储与搜索
+
+**文件**：`src/lib/embedding-store.ts`（161 行）
+**职责**：向量存储、余弦相似度计算、语义搜索
+
+#### 余弦相似度（第 11-20 行）
+
+```
+第 11 行 function cosine(a: Float32Array, b: Float32Array): number {
+          let dot = 0, normA = 0, normB = 0;
+          for (let i = 0; i < a.length; i++) {
+            dot += a[i] * b[i];      // 点积
+            normA += a[i] * a[i];    // a 的模的平方
+            normB += b[i] * b[i];    // b 的模的平方
+          }
+          const denom = Math.sqrt(normA) * Math.sqrt(normB);
+          return denom === 0 ? 0 : dot / denom;
+        }
+```
+
+**理解要点**：
+- 余弦相似度 = 两个向量的点积 / (它们的模的乘积)
+- 结果范围 [-1, 1]：1 表示方向完全一致（语义相同），0 表示正交（无关），-1 表示相反
+- `denom === 0` 是零向量保护：如果有一个向量全是 0，除法会得到 NaN，这里返回 0
+- 为什么手写？1024 维的循环在 V8 中执行很快（微秒级），不需要引入额外依赖
+
+#### 向量 ↔ Buffer 转换（第 24-29 行）
+
+```
+第 24 行 function vecToBuffer(vec: Float32Array): Buffer {
+          return Buffer.from(vec.buffer, vec.byteOffset, vec.byteLength);
+        }
+第 28 行 function bufferToVec(buf: Buffer): Float32Array {
+          return new Float32Array(buf.buffer, buf.byteOffset, buf.byteLength / 4);
+        }
+```
+
+**理解要点**：
+- `Float32Array` 是 JS 的类型化数组，每个元素占 4 字节（32 位浮点数）
+- `vecToBuffer` 是零拷贝：`Buffer.from(vec.buffer, ...)` 直接引用同一块内存，不复制
+- `bufferToVec` 中 `byteLength / 4`：字节数除以 4 得到元素数
+- 为什么存 Buffer 而不是 JSON？1024 个数字的 JSON 字符串很浪费空间，二进制 BLOB 只需 4KB
+
+#### 语义搜索（第 104-161 行）
+
+```
+第 108 行 if (!query || !query.trim()) return [];
+第 110 行 const queryVec = await embedText(query);  // 把问题转成向量
+
+第 112 行 const rows = db.select({ ... }).from(blockEmbeddings).all(); // 全表扫描
+
+第 122 行 const scored = rows.map((row) => ({
+            blockId: row.blockId,
+            score: cosine(queryVec, bufferToVec(row.embedding as Buffer)),
+          }));
+第 127 行 scored.sort((a, b) => b.score - a.score); // 按相似度降序
+第 128 行 const topResults = scored.slice(0, topK);  // 取 Top-K
+
+          // 关联 block 内容和文档标题
+第 132 行 for (const result of topResults) {
+            const blockRow = db.select().from(blocks)...get();
+            const docRow = db.select().from(documents)...get();
+            fragments.push({ blockId, noteId, score, content, noteTitle });
+          }
+```
+
+**理解要点**：
+- 流程：query → Embedding → 和所有向量算余弦 → 排序取 Top-K → 关联元数据
+- 全表扫描是 O(N)，对于几百到几千个 block 的个人知识库，毫秒级完成
+- 如果要支持百万级数据，需要换成 ANN（近似最近邻）索引，比如 HNSW
+
+---
+
+### 10.5 GenerativeUIBlock.tsx — AI 组件生成
+
+**文件**：`src/components/editor/blocks/GenerativeUIBlock.tsx`
+**职责**：流式生成可交互的 AI 组件（TaskBoard、DataTable 等）
+
+#### 流式 JSON 提取（第 44-68 行）
+
+```
+第 44 行 function extractJsonFromStream(text: string): Record<string, unknown> | null {
+            // 策略 1：从 ```json ... ``` 代码块中提取
+第 46 行     const codeBlockMatch = text.match(/```json\s*([\s\S]*?)```/);
+            if (codeBlockMatch) {
+              try { return JSON.parse(codeBlockMatch[1].trim()); }
+              catch { /* 降级到策略 2 */ }
+            }
+
+            // 策略 2：找第一个 { 到最后一个 }
+第 57 行     const firstBrace = text.indexOf('{');
+            const lastBrace = text.lastIndexOf('}');
+            if (firstBrace !== -1 && lastBrace > firstBrace) {
+              try { return JSON.parse(text.slice(firstBrace, lastBrace + 1)); }
+              catch { /* JSON 还不完整 */ }
+            }
+            return null;
+          }
+```
+
+**理解要点**：
+- 流式接收时 JSON 逐渐完整，需要在每个 chunk 都尝试解析
+- 策略 1 优先：从 ` ```json ``` ` 代码块中提取，更精确
+- 策略 2 降级：找第一个 `{` 到最后一个 `}`，适用于 AI 没有正确使用代码块的情况
+- 返回 `null` 表示 JSON 还不完整，等待下一个 chunk
+
+#### 生成流程（handleGenerate 函数）
+
+```
+// 1. 调用 /api/generate-ui
+const response = await fetch('/api/generate-ui', { body: JSON.stringify({ prompt }) });
+
+// 2. 流式读取
+const reader = response.body?.getReader();
+while (true) {
+  const { done, value } = await reader.read();
+  if (done) break;
+  accumulatedText += decoder.decode(value, { stream: true });
+
+  // 3. 每个 chunk 都尝试解析 JSON
+  const parsed = extractJsonFromStream(accumulatedText);
+  if (parsed) {
+    onUpdate({ ...block.attributes, props: parsed.props, status: 'completed' });
+  }
+}
+```
+
+**理解要点**：
+- 和 AI 重写类似，都是流式接收
+- 不同点：重写是逐 chunk 插入文本，这里是逐 chunk 尝试解析 JSON，解析成功才更新组件
+
+---
+
+### 10.6 数据库初始化流程
+
+**文件**：`src/db/index.ts`
+
+```
+// 1. 打开数据库
+const sqlite = new Database('data/ai-note.db');
+
+// 2. 配置
+sqlite.pragma('journal_mode = WAL');    // 读写并发
+sqlite.pragma('foreign_keys = ON');     // 外键约束
+sqlite.pragma('busy_timeout = 10000');  // 等待锁 10 秒
+
+// 3. 建表（幂等）
+sqlite.exec(`CREATE TABLE IF NOT EXISTS users (...)`);
+sqlite.exec(`CREATE TABLE IF NOT EXISTS documents (...)`);
+// ... 6 张表
+
+// 4. 迁移（处理已有数据库的 schema 变更）
+migrate(sqlite);
+
+// 5. Seed（首次启动时填充种子数据）
+ensureSeeded();
+
+// 6. Backfill（补全缺失的 embedding）
+backfillMissingEmbeddings();
+```
+
+**理解要点**：
+- globalThis 单例确保同一进程只有一个连接
+- WAL 模式允许读写并发（普通模式下写操作会阻塞读操作）
+- `busy_timeout = 10000`：如果数据库被锁，等 10 秒再报错
+
+---
+
+### 10.7 认证流程
+
+**文件**：`src/lib/auth.ts`
+
+```
+// 登录流程
+1. 用户提交 email + password
+2. getUserByEmail(email) 查找用户
+3. bcrypt.compare(password, hash) 验证密码
+4. signToken({ userId, email }) 生成 JWT
+5. setSessionCookie(token) 写入 httpOnly cookie
+
+// 请求验证流程
+1. getSession() 从 cookie 读取 token
+2. jwtVerify(token, secret) 验证签名和有效期
+3. 返回 { userId, email } 或 null
+```
+
+**理解要点**：
+- bcryptjs 的 `compare` 是常数时间比较，防时序攻击
+- JWT 的 Payload 是 Base64 编码（不是加密），任何人可以解码读取。但签名确保内容不被篡改
+- httpOnly cookie 的意义：JS 代码（包括 XSS 注入的脚本）无法读取这个 cookie，只有浏览器自动发送
