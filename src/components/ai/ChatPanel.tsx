@@ -13,6 +13,8 @@ import rehypeRaw from 'rehype-raw';
 import { toast } from 'sonner';
 import { CitationChip } from './CitationChip';
 import { CitationSources } from './CitationSources';
+import { InsertPreview } from './InsertPreview';
+import { parseMarkdownToBlocks } from '@/lib/parse-markdown-to-blocks';
 import { MessageSquarePlus, Trash2, ChevronDown, Pencil } from 'lucide-react';
 import type { SearchResultFragment } from '@/types';
 
@@ -43,6 +45,7 @@ export function ChatPanel() {
   const [showSessions, setShowSessions] = useState(false);
   const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState('');
+  const [previewBlocks, setPreviewBlocks] = useState<PendingInsert[] | null>(null);
   const { noteContext } = useAppStore();
 
   const loadSessions = useCallback(async () => {
@@ -406,8 +409,8 @@ export function ChatPanel() {
                     })()}
                   </div>
 
-                  {/* ...保留原有的插入到画布的按钮逻辑... */}
-                  {m.role !== 'user' && (
+                  {/* 插入到画布按钮 */}
+                  {m.role !== 'user' && hasText && (
                     <div className='flex items-center gap-2 mt-1.5 opacity-0 group-hover:opacity-100 transition-opacity'>
                       <Button
                         variant='ghost'
@@ -418,103 +421,12 @@ export function ChatPanel() {
                             .map((p) => ('text' in p ? p.text : ''))
                             .join('');
 
-                          const rawChunks = fullText.split(/\n\n+/);
-                          const blocksToInsert: PendingInsert[] = [];
-
-                          rawChunks.forEach((chunk) => {
-                            const text = chunk.trim();
-                            if (!text) return;
-
-                            const jsonMatch = text.match(
-                              /^```json\n([\s\S]*?)```$/,
-                            );
-                            if (jsonMatch) {
-                              try {
-                                const data = JSON.parse(jsonMatch[1]);
-                                if (data.componentId) {
-                                  blocksToInsert.push({
-                                    type: 'generative_ui',
-                                    content: '',
-                                    attributes: {
-                                      componentId: data.componentId,
-                                      status: 'completed',
-                                      props: data.props || {},
-                                    },
-                                  });
-                                  return;
-                                }
-                              } catch (e) {
-                                console.error('AI 返回的 JSON 格式异常:', e);
-                              }
-                            }
-
-                            const codeMatch = text.match(
-                              /^```(\w*)\n([\s\S]*?)```$/,
-                            );
-                            if (codeMatch) {
-                              blocksToInsert.push({
-                                type: 'code',
-                                content: codeMatch[2].trim(),
-                                attributes: {
-                                  language: codeMatch[1] || 'plaintext',
-                                },
-                              });
-                              return;
-                            }
-
-                            const headingMatch =
-                              text.match(/^(#{1,3})\s+(.*)$/);
-                            if (headingMatch) {
-                              blocksToInsert.push({
-                                type: 'heading',
-                                content: headingMatch[2].trim(),
-                                attributes: { level: headingMatch[1].length },
-                              });
-                              return;
-                            }
-
-                            if (text.match(/^- \[( |x|X)\]\s+/)) {
-                              const lines = text.split('\n');
-                              let pendingText = '';
-                              const flushPending = () => {
-                                if (pendingText.trim()) {
-                                  blocksToInsert.push({
-                                    type: 'paragraph',
-                                    content: pendingText.trim(),
-                                  });
-                                  pendingText = '';
-                                }
-                              };
-                              lines.forEach((line) => {
-                                const todoMatch = line.match(
-                                  /^- \[( |x|X)\]\s+(.*)$/,
-                                );
-                                if (todoMatch) {
-                                  flushPending();
-                                  blocksToInsert.push({
-                                    type: 'todo',
-                                    content: todoMatch[2].trim(),
-                                    attributes: {
-                                      checked:
-                                        todoMatch[1].toLowerCase() === 'x',
-                                    },
-                                  });
-                                } else {
-                                  pendingText +=
-                                    (pendingText ? '\n' : '') + line;
-                                }
-                              });
-                              flushPending();
-                              return;
-                            }
-
-                            blocksToInsert.push({
-                              type: 'paragraph',
-                              content: text,
-                            });
-                          });
-
-                          useAppStore.getState().triggerInsert(blocksToInsert);
+                          const blocks = parseMarkdownToBlocks(fullText);
+                          if (blocks.length === 0) {
+                            toast.info('没有可插入的内容');
+                            return;
+                          }
+                          setPreviewBlocks(blocks);
                         }}
                       >
                         ＋ 插入到画布
@@ -578,6 +490,19 @@ export function ChatPanel() {
           </Button>
         </form>
       </div>
+
+      {/* 插入预览面板 */}
+      {previewBlocks && (
+        <InsertPreview
+          blocks={previewBlocks}
+          onConfirm={(selectedBlocks) => {
+            useAppStore.getState().triggerInsert(selectedBlocks);
+            setPreviewBlocks(null);
+            toast.success(`已插入 ${selectedBlocks.length} 个区块`);
+          }}
+          onCancel={() => setPreviewBlocks(null)}
+        />
+      )}
     </div>
   );
 }

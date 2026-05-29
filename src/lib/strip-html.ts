@@ -18,6 +18,30 @@ export function stripHtml(html: string): string {
 }
 
 /**
+ * Convert inline markdown syntax to HTML tags.
+ * Handles: **bold**, *italic*, `code`, ~~strikethrough~~, [text](url)
+ * Does NOT handle block-level elements (headings, lists, code blocks).
+ */
+export function markdownToHtml(text: string): string {
+  if (!text) return '';
+  return (
+    text
+      // **bold** or __bold__ → <strong>
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/__(.+?)__/g, '<strong>$1</strong>')
+      // *italic* or _italic_ → <em>（避免匹配 *list* 开头的星号）
+      .replace(/(?<!\w)\*(?!\*)(.+?)(?<!\*)\*(?!\w)/g, '<em>$1</em>')
+      .replace(/(?<!\w)_(?!_)(.+?)(?<!_)_(?!\w)/g, '<em>$1</em>')
+      // `code` → <code>
+      .replace(/`([^`]+)`/g, '<code>$1</code>')
+      // ~~strikethrough~~ → <del>
+      .replace(/~~(.+?)~~/g, '<del>$1</del>')
+      // [text](url) → <a>
+      .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>')
+  );
+}
+
+/**
  * Convert plain text to HTML paragraphs for Tiptap.
  * Handles backward compatibility with data saved before getHTML() fix.
  * - If content already has HTML tags, return as-is

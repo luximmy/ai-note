@@ -367,21 +367,24 @@ export function BlockRenderer({
       setBlocks((prev) => [...prev, ...newBlocks]); // eslint-disable-line react-hooks/set-state-in-effect
       setSafeSnapshot((prev) => [...prev, ...newBlocks]);
 
-      // 静默触发网络请求，失败时回滚
-      const lastBlockId =
-        blocksRef.current[blocksRef.current.length - 1]?.id || 'mock-id';
+      // 链式插入：每个 block 引用前一个 block 的 ID，保证顺序正确
       const insertedIds = new Set(newBlocks.map((b) => b.id));
+      const currentBlocks = blocksRef.current;
+      let prevBlockId = currentBlocks[currentBlocks.length - newBlocks.length - 1]?.id || 'mock-id';
 
-      Promise.allSettled(
-        newBlocks.map((block) => addBlockAction(noteId, lastBlockId, block)),
-      ).then((results) => {
-        const failed = results.filter((r) => r.status === 'rejected');
-        if (failed.length > 0) {
-          toast.error(`批量插入：${failed.length} 个区块保存失败，已自动回滚`);
+      // 使用 reduce 串行执行，保证顺序
+      newBlocks.reduce(async (prevPromise, block) => {
+        await prevPromise;
+        const result = await addBlockAction(noteId, prevBlockId, block);
+        if (result.success) {
+          prevBlockId = block.id; // 下一个 block 插在这个后面
+        }
+      }, Promise.resolve())
+        .catch(() => {
+          toast.error('部分区块保存失败，已自动回滚');
           setBlocks((prev) => prev.filter((b) => !insertedIds.has(b.id)));
           setSafeSnapshot((prev) => prev.filter((b) => !insertedIds.has(b.id)));
-        }
-      });
+        });
 
       clearInsert();
     }

@@ -37,6 +37,46 @@
 - 对话自动命名取第一条消息前 30 字符
 - 删除确认使用 shadcn Dialog 替代浏览器 confirm
 
+## Generative UI 重构 + AI 组件库 + 插入预览 + Bug 修复 ✅
+
+**目标**：让 AI 功能真正可用 — 修复 Generative UI 流程、扩展组件库、改进插入体验、修复已有 bug。
+
+**实现内容**：
+
+1. **Generative UI 流程修复**
+   - `src/app/api/generate-ui/route.ts`（新建）— Generative UI 专用 API Route，接收 prompt + noteContext，流式返回结构化 JSON，支持 4 种组件类型
+   - `src/components/editor/blocks/GenerativeUIBlock.tsx`（重写）— streaming + 空 props 时显示 prompt 输入框（含快捷按钮），调用 /api/generate-ui 流式生成，实时解析 JSON 并渲染组件，错误状态支持重试
+   - `src/components/editor/blocks/GenerativeUIBlock.test.tsx`（更新）— 测试用例适配新行为（prompt 输入框替代永久加载动画）
+
+2. **AI 组件库扩展**
+   - `src/components/ai/DataTable.tsx`（新建）— 可排序、可筛选的数据表格
+   - `src/components/ai/MermaidDiagram.tsx`（新建）— 流程图/思维导图，动态加载 mermaid 库
+   - `src/components/ai/Timeline.tsx`（新建）— 可展开的时间线组件
+   - 安装 `mermaid` 依赖
+
+3. **系统提示词更新**
+   - `src/app/api/chat/route.ts`（修改）— 教 AI 关于 4 种 componentId（TaskBoard、DataTable、MermaidDiagram、Timeline）及选择规则
+
+4. **插入画布预览面板**
+   - `src/lib/parse-markdown-to-blocks.ts`（新建）— 从 ChatPanel 提取为独立模块，逐行状态机解析
+   - `src/components/ai/InsertPreview.tsx`（新建）— 弹出式预览面板，复选框选择性插入，全选/取消全选
+   - `src/components/ai/ChatPanel.tsx`（修改）— "插入到画布"改为打开预览面板
+
+5. **Markdown 解析引擎重写**
+   - `src/lib/parse-markdown-to-blocks.ts` — 从按双换行分割改为逐行状态机，支持：JSON 代码块、代码块、标题、Todo、无序列表、有序列表、分割线、引用块、段落
+   - `src/lib/strip-html.ts`（修改）— 新增 `markdownToHtml()` 函数，将内联 markdown 语法转为 HTML
+
+6. **Bug 修复**
+   - `src/components/layout/AppShell.tsx` — 修复笔记列表新建/删除不刷新（localDocuments 合并逻辑缺陷）
+   - `src/components/editor/BlockRenderer.tsx` — 修复批量插入顺序反转（改为链式串行插入）
+
+**技术决策**：
+- Generative UI 使用独立 API Route 而非复用 /api/chat：system prompt 不同，隔离更清晰
+- MermaidDiagram 使用动态 import：mermaid 库体积大（~1MB），按需加载减少首屏 bundle
+- 插入预览面板用 createPortal 渲染：避免被编辑器 overflow 裁剪
+- Markdown 解析改为逐行状态机：AI 回复经常用单换行，按双换行分割会导致所有内容降级为段落
+- 批量插入改为串行链式：每个 block 引用前一个 block 的 ID，保证顺序正确
+
 ---
 
 # 2026-05-28 工作日志

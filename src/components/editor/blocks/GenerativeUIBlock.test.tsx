@@ -14,7 +14,7 @@ function createBlock(
 }
 
 describe('GenerativeUIBlock', () => {
-  it('应渲染 streaming 状态', () => {
+  it('应渲染 streaming 状态（prompt 输入框）', () => {
     render(
       <GenerativeUIBlock
         block={createBlock({
@@ -25,9 +25,9 @@ describe('GenerativeUIBlock', () => {
       />,
     );
 
-    expect(
-      screen.getByText('AI 正在生成 TaskBoard 组件...'),
-    ).toBeInTheDocument();
+    // 新行为：streaming + 空 props 显示 prompt 输入框
+    expect(screen.getByText('AI 组件生成器')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('例如：帮我做一个项目进度表...')).toBeInTheDocument();
   });
 
   it('应渲染 error 降级状态', () => {
@@ -41,9 +41,9 @@ describe('GenerativeUIBlock', () => {
       />,
     );
 
-    expect(
-      screen.getByText('⚠️ 生成组件失败，大模型返回了无法解析的格式。'),
-    ).toBeInTheDocument();
+    expect(screen.getByText('生成组件失败')).toBeInTheDocument();
+    expect(screen.getByText(/AI 返回了无法解析的格式/)).toBeInTheDocument();
+    expect(screen.getByText('重试')).toBeInTheDocument();
   });
 
   it('遇到未知 componentId 时应展示降级 UI', () => {

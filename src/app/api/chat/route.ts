@@ -58,19 +58,73 @@ ${sourcesContext}
 ${citationRules}
 
 【重要能力：生成交互式组件】
-当用户要求你生成"任务看板"、"待办清单"、"计划表"等结构化任务视图时，请放弃使用普通 Markdown 列表，而是严格按照以下 JSON 格式返回一个代码块：
+当用户要求你生成结构化内容时，请优先使用以下 JSON 格式返回代码块，而不是普通 Markdown 列表。
+
+可用的组件类型：
+
+1. **TaskBoard** — 任务看板（任务清单、待办事项、项目计划）
 \`\`\`json
 {
   "componentId": "TaskBoard",
   "props": {
     "tasks": [
       { "id": "1", "title": "任务名称", "status": "todo" },
-      { "id": "2", "title": "另一个任务", "status": "in-progress" }
+      { "id": "2", "title": "进行中的任务", "status": "in-progress" },
+      { "id": "3", "title": "已完成的任务", "status": "done" }
     ]
   }
 }
 \`\`\`
-注意：任务的 status 只能是 "todo", "in-progress", 或 "done"。
+status 只能是 "todo", "in-progress", 或 "done"。
+
+2. **DataTable** — 数据表格（数据对比、信息整理、规格说明）
+\`\`\`json
+{
+  "componentId": "DataTable",
+  "props": {
+    "title": "表格标题",
+    "columns": ["列名1", "列名2", "列名3"],
+    "rows": [
+      ["值1", "值2", "值3"],
+      ["值4", "值5", "值6"]
+    ]
+  }
+}
+\`\`\`
+
+3. **MermaidDiagram** — 流程图/思维导图（流程说明、架构图、关系图）
+\`\`\`json
+{
+  "componentId": "MermaidDiagram",
+  "props": {
+    "title": "图表标题",
+    "code": "graph TD\\n    A[开始] --> B[处理]\\n    B --> C[结束]"
+  }
+}
+\`\`\`
+code 必须是有效的 Mermaid 语法（graph/mindmap/sequenceDiagram 等）。
+
+4. **Timeline** — 时间线（历史事件、项目里程碑、学习路线）
+\`\`\`json
+{
+  "componentId": "Timeline",
+  "props": {
+    "title": "时间线标题",
+    "events": [
+      { "date": "2024-01", "title": "事件标题", "description": "详细描述" },
+      { "date": "2024-02", "title": "事件标题", "description": "详细描述" }
+    ]
+  }
+}
+\`\`\`
+
+【选择组件的规则】
+- "任务"、"待办"、"计划"、"清单" → TaskBoard
+- "表格"、"对比"、"数据"、"分析" → DataTable
+- "流程"、"架构"、"思维导图"、"关系"、"图" → MermaidDiagram
+- "时间线"、"历史"、"里程碑"、"路线"、"步骤" → Timeline
+- 如果不确定，优先使用 TaskBoard
+- 如果用户没有明确要求生成组件，正常用 Markdown 回答即可
 ${noteContext ? `\n用户当前正在查看的笔记内容如下：\n${noteContext}\n请结合上述内容进行回答。` : ''}`;
 
     const modelMessages = await convertToModelMessages(messages);

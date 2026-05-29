@@ -3,8 +3,8 @@
 ## 1. 项目基本信息
 
 - **项目名称**：ai-note
-- **当前阶段**：阶段三全部完成；阶段四全部完成（拖拽排序 ✅ + AI 局部重写 ✅ + 知识网络 ✅ + 收尾打磨 ✅ + 暗色模式 ✅）；阶段五 RAG + Citations 已完成；阶段六真实数据层已完成；阶段七语义向量检索已完成；阶段八用户认证已完成；笔记增删 + AI 对话持久化已完成
-- **当前重心**：新增笔记创建/删除功能，AI 对话历史持久化，演示账户自动填充
+- **当前阶段**：阶段三全部完成；阶段四全部完成（拖拽排序 ✅ + AI 局部重写 ✅ + 知识网络 ✅ + 收尾打磨 ✅ + 暗色模式 ✅）；阶段五 RAG + Citations 已完成；阶段六真实数据层已完成；阶段七语义向量检索已完成；阶段八用户认证已完成；笔记增删 + AI 对话持久化已完成；Generative UI 重构 + AI 组件库 + 插入预览已完成
+- **当前重心**：AI 功能体验重构 — Generative UI 真正可用、多种 AI 组件、选择性插入
 - **上次更新时间**：2026-05-29
 
 ## 2. 已完成里程碑 (Completed)
@@ -61,6 +61,12 @@
 - [x] **笔记新增/删除功能**：`AppShell` 侧边栏添加"新建笔记"按钮（`FilePlus` 图标）+ 笔记列表项 hover 显示删除按钮（`Trash2` 图标）；`src/db/queries.ts` 新增 `createDocument` 和 `deleteDocument` 函数；`src/actions/note.ts` 新增 `createNote` 和 `deleteNote` Server Actions；新建笔记自动创建默认空段落区块；删除笔记前二次确认。
 - [x] **AI 对话历史持久化**：`src/db/schema.ts` 新增 `chat_sessions` 和 `chat_messages` 表；`src/db/queries.ts` 新增对话 CRUD 函数（createChatSession/getChatSessions/getChatMessages/addChatMessage 等）；3 个 API 路由（`/api/chat/sessions`、`/api/chat/sessions/[id]`、`/api/chat/sessions/[id]/messages`）；`ChatPanel` 集成对话列表选择器 + 新建对话按钮 + 删除对话功能；消息自动持久化到数据库。
 - [x] **演示账户自动填充**：登录页面添加"使用演示账户"按钮，点击自动填充 admin@test.com / admin123。
+- [x] **Generative UI 重构（阶段九）**：修复 Slash Menu → Generative UI 流程。新建 `/api/generate-ui` API Route（Node.js Runtime + DeepSeek streaming）；`GenerativeUIBlock` 改造 — streaming 状态显示 prompt 输入框（含快捷按钮），用户输入后调用 API 流式生成 JSON，实时解析并渲染组件，错误状态支持重试；`GenerativeUIBlock.test.tsx` 更新测试用例适配新行为。
+- [x] **AI 组件库扩展**：新增 3 个 AI 组件并注册到 `AIComponentRegistry`。`DataTable`（可排序、可筛选的数据表格）；`MermaidDiagram`（流程图/思维导图，动态加载 mermaid 库）；`Timeline`（可展开的时间线组件）。系统提示词更新，教 AI 关于 4 种组件类型及选择规则。
+- [x] **插入画布预览面板**：新建 `InsertPreview` 组件 — 弹出式预览面板，每个 block 前有复选框，支持全选/取消全选，不同 block 类型用不同图标和颜色区分。`ChatPanel` 的"插入到画布"按钮改为打开预览面板，确认后才调用 `triggerInsert`。
+- [x] **Markdown 解析引擎重写**：`parseMarkdownToBlocks` 从按双换行分割的 chunk 解析改为逐行状态机解析。支持：JSON 代码块、代码块、标题、Todo 列表、无序列表、有序列表、分割线、引用块、段落。段落内容通过 `markdownToHtml` 转为 HTML（保留 **bold**、*italic**、`code` 等内联格式），Tiptap 可直接渲染。
+- [x] **Bug 修复：笔记列表新建/删除不刷新**：`AppShell` 的 `localDocuments` 初始为空数组导致合并逻辑失效，改为初始化为 `initialDocuments` + `useEffect` 同步。
+- [x] **Bug 修复：批量插入顺序反转**：所有 block 引用同一个 `lastBlockId` 导致并行插入后顺序反转，改为链式串行插入。
 
 ## 3. 进行中的任务 (In Progress)
 

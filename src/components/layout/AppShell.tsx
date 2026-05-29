@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { ChatPanel } from '@/components/ai/ChatPanel';
 import { FilePlus, LogOut, Network, Trash2, User } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { createNote, deleteNote } from '@/actions/note';
 
@@ -29,27 +29,17 @@ export function AppShell({ documents: initialDocuments, user, children }: AppShe
   const router = useRouter();
   const isGraphPage = pathname === '/app/graph';
 
-  const [localDocuments, setLocalDocuments] = useState<DocumentMeta[]>([]);
+  const [localDocuments, setLocalDocuments] = useState<DocumentMeta[]>(initialDocuments);
   const [agentPanelWidth, setAgentPanelWidth] = useState(320);
   const [creating, setCreating] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; title: string } | null>(null);
   const [deleting, setDeleting] = useState(false);
   const isDraggingRef = useRef(false);
 
-  // Merge server documents with local changes
-  const documents = useMemo(() => {
-    if (localDocuments.length === 0) return initialDocuments;
-    // Merge: keep server order but apply local additions/deletions
-    const localIds = new Set(localDocuments.map((d) => d.id));
-    const serverIds = new Set(initialDocuments.map((d) => d.id));
-
-    // Documents in local but not in server (new additions)
-    const additions = localDocuments.filter((d) => !serverIds.has(d.id));
-    // Documents in server but not in local (deletions)
-    const remaining = initialDocuments.filter((d) => localIds.has(d.id));
-
-    return [...remaining, ...additions];
-  }, [initialDocuments, localDocuments]);
+  // 当 initialDocuments 变化时（如 router.refresh()），同步到本地状态
+  useEffect(() => {
+    setLocalDocuments(initialDocuments); // eslint-disable-line react-hooks/set-state-in-effect
+  }, [initialDocuments]);
 
   async function handleLogout() {
     try {
@@ -155,7 +145,7 @@ export function AppShell({ documents: initialDocuments, user, children }: AppShe
                   <FilePlus className='h-4 w-4' />
                 </button>
               </div>
-              {documents.map((doc) => {
+              {localDocuments.map((doc) => {
                 const href = `/app/note/${doc.id}`;
                 const isActive = pathname === href;
                 return (
