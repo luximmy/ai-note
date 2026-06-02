@@ -15,10 +15,10 @@ export async function POST(req: Request) {
   try {
     const session = await getSession();
     if (!session) {
-      return new Response(
-        JSON.stringify({ error: '未登录' }),
-        { status: 401, headers: { 'Content-Type': 'application/json' } },
-      );
+      return new Response(JSON.stringify({ error: '未登录' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' },
+      });
     }
 
     // 接收要修改的文本、指令动作（如”扩写”）、以及当前笔记上下文
@@ -37,7 +37,7 @@ export async function POST(req: Request) {
     `;
 
     const result = streamText({
-      model: deepseek.chat('deepseek-chat'),
+      model: deepseek.chat('deepseek-v4-flash'),
       system: systemPrompt,
       prompt: `【指令】：${instruction}\n\n【需要处理的选中文本】：\n${text}`,
       // 降低温度，让 AI 的修改更稳定、更符合上下文

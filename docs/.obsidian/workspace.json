@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "Project-Deep-Dive.md",
+                "file": "简历.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "Project-Deep-Dive"
+              "title": "简历"
             }
           }
         ]
@@ -185,6 +185,11 @@
   },
   "active": "b44bb7375ff399f2",
   "lastOpenFiles": [
+    "wikilink.md",
+    "简历.md",
+    "Project-Deep-Dive.md",
+    "Interview-QA.md",
+    "Daily-Log.md",
     "Interview-QA.md.tmp.303548.2656f8208d3c",
     "Interview-QA.md.tmp.303548.f7824aa7c972",
     "Interview-QA.md.tmp.303548.86883a761e5e",
@@ -194,12 +199,7 @@
     "Project-Deep-Dive.md.tmp.303548.35e44783932d",
     "Project-Deep-Dive.md.tmp.303548.437d3a07cca7",
     "Daily-Log.md.tmp.303548.f305c871c79b",
-    "Interview-QA.md",
     "Interview-QA.md.tmp.303548.9215b7d8e3af",
-    "简历.md",
-    "Project-Deep-Dive.md",
-    "Project-Deep-Dive.md.tmp.303548.05c2b4d962c5",
-    "Daily-Log.md",
     "Record-of-Pitfalls.md",
     "Project-Vision-and-PRD.md",
     "Phase-4-Execution-Plan.md",

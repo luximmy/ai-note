@@ -1,13 +1,14 @@
 // src/components/editor/RewriteToolbar.tsx
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Sparkles, Wand2, Minimize2, Languages, ArrowRight } from 'lucide-react';
 
 interface RewriteToolbarProps {
   isOpen: boolean;
   position: { x: number; y: number } | null;
+  selectedText: string;
   onRewrite: (instruction: string) => void;
   onClose: () => void;
 }
@@ -15,10 +16,24 @@ interface RewriteToolbarProps {
 export function RewriteToolbar({
   isOpen,
   position,
+  selectedText,
   onRewrite,
   onClose,
 }: RewriteToolbarProps) {
   const [customInput, setCustomInput] = useState('');
+  const toolbarRef = useRef<HTMLDivElement>(null);
+
+  // 点击外部关闭工具栏
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (toolbarRef.current && !toolbarRef.current.contains(e.target as Node)) {
+        onClose();
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isOpen, onClose]);
 
   // Escape 关闭工具栏
   useEffect(() => {
@@ -70,24 +85,24 @@ export function RewriteToolbar({
   ];
 
   // 边界翻转：工具栏靠近顶部时向下弹出
-  const TOOLBAR_HEIGHT = 120;
+  const TOOLBAR_HEIGHT = 150;
   const flipBelow = position.y - TOOLBAR_HEIGHT < 0;
 
   return createPortal(
     <div
+      ref={toolbarRef}
       className='fixed z-9999 bg-popover border border-border rounded-xl shadow-xl overflow-hidden flex flex-col font-sans animate-in fade-in zoom-in-95 duration-100 w-64'
       style={{
         top: flipBelow ? position.y + 10 : position.y - 10,
         left: position.x,
         transform: flipBelow ? 'translate(-50%, 0)' : 'translate(-50%, -100%)',
       }}
-      // 阻止鼠标事件冒泡，防止点击菜单时导致 Tiptap 失去焦点或选区消失
-      onMouseDown={(e) => e.preventDefault()}
     >
       <div className='p-1 flex flex-wrap gap-1 bg-muted border-b border-border'>
         {quickActions.map((action) => (
           <button
             key={action.label}
+            onMouseDown={(e) => e.preventDefault()}
             onClick={() => onRewrite(action.prompt)}
             className='flex items-center gap-1.5 px-2 py-1.5 text-xs text-foreground hover:text-primary hover:bg-accent rounded-md transition-colors'
           >
@@ -96,6 +111,13 @@ export function RewriteToolbar({
           </button>
         ))}
       </div>
+      {selectedText && (
+        <div className='px-3 py-2 border-b border-border'>
+          <p className='text-[11px] text-muted-foreground leading-relaxed line-clamp-2'>
+            「{selectedText.length > 60 ? selectedText.slice(0, 60) + '…' : selectedText}」
+          </p>
+        </div>
+      )}
       <form
         onSubmit={handleCustomSubmit}
         className='p-2 flex gap-2'

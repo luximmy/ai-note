@@ -1,3 +1,32 @@
+# 2026-06-01 工作日志
+
+## AI Rewrite 工具栏修复与增强 ✅
+
+**目标**：修复自定义指令输入框不可用 + 点击外部不关闭弹窗两个 bug，并增强选中文本高亮与预览。
+
+**实现内容**：
+
+1. **Bug 修复：自定义指令输入框不可用**
+   - `src/components/editor/RewriteToolbar.tsx` — 将 `onMouseDown={(e) => e.preventDefault()}` 从外层 div 移至快速操作按钮，解除对 input 焦点获取的阻断
+
+2. **Bug 修复：点击外部不关闭弹窗**
+   - `src/components/editor/RewriteToolbar.tsx` — 新增 `toolbarRef` + `mousedown` 事件监听，实现 click-outside 关闭
+
+3. **选中文本预览**
+   - `RewriteToolbar.tsx` — 新增 `selectedText` prop，在工具栏中显示当前选中文本的截断预览（「…」格式）
+   - `RichTextEditor.tsx` — 透传 `rewriteMenuState.text` 给 `selectedText`
+
+4. **选中文本持久高亮**
+   - `src/components/editor/extensions/rewrite-highlight.ts`（新建）— ProseMirror 装饰器插件，通过 `Decoration.inline()` 实现不依赖浏览器选区的持久高亮
+   - `RichTextEditor.tsx` — 注册插件 + `useEffect` 监听菜单开关状态，打开时设置高亮范围，关闭时清除
+   - `src/app/globals.css` — 新增 `.rewrite-highlight` 样式（紫色半透明背景，亮/暗色模式自适应）
+
+**技术决策**：
+- 使用 ProseMirror `Decoration.inline()` 而非 CSS `::selection`，因为 `::selection` 在编辑器失焦时消失，而装饰器渲染为 `<mark>` DOM 元素，焦点切换到 toolbar 输入框后高亮依然可见
+- `preventDefault` 从外层 div 移至按钮，而非完全移除——快速操作按钮仍需阻止 mousedown 以防止 Tiptap 编辑器失焦
+
+---
+
 # 2026-05-29 工作日志
 
 ## 用户认证 + 笔记管理 + AI 对话持久化 ✅

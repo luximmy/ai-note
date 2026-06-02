@@ -9,6 +9,7 @@ import { useRouter } from 'next/navigation';
 import { SlashMenu, SlashMenuItem } from './SlashMenu';
 import { RewriteToolbar } from './RewriteToolbar';
 import { registerWikilinkPlugin } from './extensions/wikilink-decoration';
+import { createRewriteHighlightPlugin, setRewriteHighlight } from './extensions/rewrite-highlight';
 import { useAppStore } from '@/store';
 import { toast } from 'sonner';
 import { ensureHtml } from '@/lib/strip-html';
@@ -90,6 +91,11 @@ export function RichTextEditor({
           'is-editor-empty before:content-[attr(data-placeholder)] before:text-muted-foreground before:absolute before:pointer-events-none',
       }),
     ],
+
+    // 注册 rewrite 高亮插件（在 editor 实例创建时注入）
+    onCreate: ({ editor }) => {
+      editor.registerPlugin(createRewriteHighlightPlugin());
+    },
     // 💥 修复 1：防抖处理选区更新
     onSelectionUpdate: ({ editor }) => {
       // a. 只要选区发生变化，立刻隐藏菜单，防止拖拽时闪烁
@@ -210,6 +216,19 @@ export function RichTextEditor({
     return () => clearTimeout(timer);
   }, [editor]);
 
+  // Rewrite 高亮：当菜单打开时高亮选中文本，关闭时清除
+  useEffect(() => {
+    if (!editor) return;
+    if (rewriteMenuState.isOpen && rewriteMenuState.from !== rewriteMenuState.to) {
+      setRewriteHighlight(editor, {
+        from: rewriteMenuState.from,
+        to: rewriteMenuState.to,
+      });
+    } else {
+      setRewriteHighlight(editor, null);
+    }
+  }, [editor, rewriteMenuState.isOpen, rewriteMenuState.from, rewriteMenuState.to]);
+
   // 劫持外部数据刷新
   useEffect(() => {
     /* (保留原有逻辑) */
@@ -317,6 +336,7 @@ export function RichTextEditor({
       <RewriteToolbar
         isOpen={rewriteMenuState.isOpen}
         position={rewriteMenuState.position}
+        selectedText={rewriteMenuState.text}
         onRewrite={handleRewrite}
         onClose={() =>
           setRewriteMenuState((prev) => ({ ...prev, isOpen: false }))
