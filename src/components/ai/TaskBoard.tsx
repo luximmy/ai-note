@@ -1,5 +1,5 @@
 // src/components/ai/TaskBoard.tsx
-import { CheckCircle2, Circle } from 'lucide-react';
+import { CheckCircle2, Circle, Loader2 } from 'lucide-react';
 
 interface Task {
   id: string | number;
@@ -61,6 +61,28 @@ export function TaskBoard({
   };
 
   const doneCount = normalizedTasks.filter((t) => t.status === 'done').length;
+  const inProgressCount = normalizedTasks.filter(
+    (t) => t.status === 'in-progress'
+  ).length;
+
+  const statusConfig = {
+    todo: {
+      icon: <Circle className='w-5 h-5 text-muted-foreground/50 shrink-0 mt-0.5' />,
+      itemClass: 'bg-background border border-border shadow-sm hover:border-primary/30',
+      textClass: 'text-foreground',
+    },
+    'in-progress': {
+      icon: <Loader2 className='w-5 h-5 text-blue-500 shrink-0 mt-0.5 animate-spin' />,
+      itemClass:
+        'bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 shadow-sm hover:border-blue-400',
+      textClass: 'text-foreground',
+    },
+    done: {
+      icon: <CheckCircle2 className='w-5 h-5 text-emerald-500 shrink-0 mt-0.5' />,
+      itemClass: 'bg-secondary/50',
+      textClass: 'text-muted-foreground line-through',
+    },
+  } as const;
 
   return (
     <div className='bg-muted border border-border rounded-xl p-4 my-4 font-sans shadow-sm'>
@@ -69,38 +91,26 @@ export function TaskBoard({
           <span>📋</span> AI 生成任务看板
         </h3>
         <span className='text-xs font-medium text-muted-foreground bg-secondary px-2 py-1 rounded-full'>
-          {doneCount} / {normalizedTasks.length}
+          {doneCount} done{inProgressCount > 0 && ` · ${inProgressCount} in progress`} · {normalizedTasks.length} total
         </span>
       </div>
 
       <div className='space-y-2'>
-        {normalizedTasks.map((task) => (
-          <div
-            key={task.id}
-            // ✨ 4. 绑定点击事件，并加上鼠标手势
-            onClick={() => toggleTaskStatus(task.id)}
-            className={`flex items-start gap-3 p-2.5 rounded-lg transition-colors cursor-pointer ${
-              task.status === 'done'
-                ? 'bg-secondary/50'
-                : 'bg-background border border-border shadow-sm hover:border-primary/30'
-            }`}
-          >
-            {task.status === 'done' ? (
-              <CheckCircle2 className='w-5 h-5 text-emerald-500 shrink-0 mt-0.5' />
-            ) : (
-              <Circle className='w-5 h-5 text-muted-foreground/50 shrink-0 mt-0.5' />
-            )}
-            <span
-              className={`text-sm leading-relaxed ${
-                task.status === 'done'
-                  ? 'text-muted-foreground line-through'
-                  : 'text-foreground'
-              }`}
+        {normalizedTasks.map((task) => {
+          const config = statusConfig[task.status];
+          return (
+            <div
+              key={task.id}
+              onClick={() => toggleTaskStatus(task.id)}
+              className={`flex items-start gap-3 p-2.5 rounded-lg transition-colors cursor-pointer ${config.itemClass}`}
             >
-              {task.title}
-            </span>
-          </div>
-        ))}
+              {config.icon}
+              <span className={`text-sm leading-relaxed ${config.textClass}`}>
+                {task.title}
+              </span>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

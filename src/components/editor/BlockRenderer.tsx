@@ -370,16 +370,19 @@ export function BlockRenderer({
       // 链式插入：每个 block 引用前一个 block 的 ID，保证顺序正确
       const insertedIds = new Set(newBlocks.map((b) => b.id));
       const currentBlocks = blocksRef.current;
-      let prevBlockId = currentBlocks[currentBlocks.length - newBlocks.length - 1]?.id || 'mock-id';
+      let prevBlockId =
+        currentBlocks[currentBlocks.length - newBlocks.length - 1]?.id ||
+        'mock-id';
 
       // 使用 reduce 串行执行，保证顺序
-      newBlocks.reduce(async (prevPromise, block) => {
-        await prevPromise;
-        const result = await addBlockAction(noteId, prevBlockId, block);
-        if (result.success) {
-          prevBlockId = block.id; // 下一个 block 插在这个后面
-        }
-      }, Promise.resolve())
+      newBlocks
+        .reduce(async (prevPromise, block) => {
+          await prevPromise;
+          const result = await addBlockAction(noteId, prevBlockId, block);
+          if (result.success) {
+            prevBlockId = block.id; // 下一个 block 插在这个后面
+          }
+        }, Promise.resolve())
         .catch(() => {
           toast.error('部分区块保存失败，已自动回滚');
           setBlocks((prev) => prev.filter((b) => !insertedIds.has(b.id)));
@@ -492,7 +495,7 @@ export function BlockRenderer({
   return (
     <div className='space-y-4 pb-32'>
       <DndContext
-        id="note-blocks-dnd"
+        id='note-blocks-dnd'
         sensors={sensors}
         collisionDetection={closestCenter}
         onDragStart={handleDragStart} // 👈 绑定事件
