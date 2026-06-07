@@ -14,6 +14,11 @@ import { toast } from 'sonner';
 import { CitationChip } from './CitationChip';
 import { CitationSources } from './CitationSources';
 import { InsertPreview } from './InsertPreview';
+import { parseComponentSegments } from './parse-component-segments';
+import { TaskBoard } from './TaskBoard';
+import { DataTable } from './DataTable';
+import { MermaidDiagram } from './MermaidDiagram';
+import { Timeline } from './Timeline';
 import { parseMarkdownToBlocks } from '@/lib/parse-markdown-to-blocks';
 import { MessageSquarePlus, Trash2, ChevronDown, Pencil } from 'lucide-react';
 import type { SearchResultFragment } from '@/types';
@@ -370,6 +375,8 @@ export function ChatPanel() {
                         .map((part) => ('text' in part ? part.text : ''))
                         .join('');
 
+                      const segments = parseComponentSegments(rawText);
+
                       // Extract citation indices actually used in the text
                       const citedIndices = new Set(
                         [...rawText.matchAll(/\[(\d+)\]/g)].map((m) => parseInt(m[1], 10)),
@@ -378,29 +385,48 @@ export function ChatPanel() {
                       const citedSources = sources
                         .map((s, i) => ({ source: s, displayIndex: i + 1 }))
                         .filter((_, i) => citedIndices.has(i + 1));
-                      const textWithCiteTags = injectCiteTags(rawText);
+
+                      const COMPONENT_MAP: Record<string, React.FC<Record<string, unknown>>> = {
+                        TaskBoard: TaskBoard as React.FC<Record<string, unknown>>,
+                        DataTable: DataTable as React.FC<Record<string, unknown>>,
+                        MermaidDiagram: MermaidDiagram as React.FC<Record<string, unknown>>,
+                        Timeline: Timeline as React.FC<Record<string, unknown>>,
+                      };
 
                       return (
                         <>
-                          <div className={markdownClasses}>
-                            <ReactMarkdown
-                              remarkPlugins={[remarkGfm]}
-                              rehypePlugins={[rehypeRaw]}
-                              components={{
-                                cite: ({ node }) => {
-                                  const index = Number(
-                                    (node?.properties?.dataIndex as string) ?? 0,
-                                  );
-                                  const source = sources[index - 1];
-                                  return (
-                                    <CitationChip index={index} source={source} />
-                                  );
-                                },
-                              }}
-                            >
-                              {textWithCiteTags}
-                            </ReactMarkdown>
-                          </div>
+                          {segments.map((segment, segIndex) => {
+                            if (segment.type === 'component') {
+                              const Component = COMPONENT_MAP[segment.componentId];
+                              if (Component) {
+                                return <Component key={segIndex} {...segment.props} />;
+                              }
+                              return null;
+                            }
+                            // Text segment
+                            const textWithCiteTags = injectCiteTags(segment.content);
+                            return (
+                              <div key={segIndex} className={markdownClasses}>
+                                <ReactMarkdown
+                                  remarkPlugins={[remarkGfm]}
+                                  rehypePlugins={[rehypeRaw]}
+                                  components={{
+                                    cite: ({ node }) => {
+                                      const index = Number(
+                                        (node?.properties?.dataIndex as string) ?? 0,
+                                      );
+                                      const source = sources[index - 1];
+                                      return (
+                                        <CitationChip index={index} source={source} />
+                                      );
+                                    },
+                                  }}
+                                >
+                                  {textWithCiteTags}
+                                </ReactMarkdown>
+                              </div>
+                            );
+                          })}
                           {hasCitations && citedSources.length > 0 && (
                             <CitationSources sources={citedSources} />
                           )}
