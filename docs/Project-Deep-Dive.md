@@ -325,7 +325,7 @@ async function requireAuth(): Promise<string> {
 
 ### 10.1 BlockRenderer.tsx — 编辑器的大脑
 
-**文件**：`src/components/editor/BlockRenderer.tsx`（567 行）
+**文件**：`src/components/editor/BlockRenderer.tsx`（569 行）
 **职责**：管理所有区块的状态、保存、回滚、拖拽、插入
 
 #### 核心状态（第 87-101 行）
@@ -505,7 +505,7 @@ async function requireAuth(): Promise<string> {
 
 ### 10.2 RichTextEditor.tsx — 富文本编辑器
 
-**文件**：`src/components/editor/RichTextEditor.tsx`（327 行）
+**文件**：`src/components/editor/RichTextEditor.tsx`（347 行）
 **职责**：基于 Tiptap 的单个区块的富文本编辑器，处理输入、斜杠菜单、AI 重写
 
 #### Tiptap 初始化（第 79-197 行）

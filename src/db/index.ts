@@ -1,101 +1,37 @@
-import Database from 'better-sqlite3';
-import { drizzle } from 'drizzle-orm/better-sqlite3';
+// src/db/index.ts
+import { drizzle } from 'drizzle-orm/libsql';
+import { createClient, Client } from '@libsql/client';
 import * as schema from './schema';
-import path from 'node:path';
-import fs from 'node:fs';
-import { migrateDatabase } from './migrate';
 
-// Use globalThis singleton to avoid multiple connections during Next.js build
-const globalForDb = globalThis as unknown as {
-  __aiNoteDb: ReturnType<typeof drizzle>;
-  __aiNoteSqlite: Database.Database;
-  __aiNoteSeeded: boolean;
-};
-
-function getDb() {
-  if (!globalForDb.__aiNoteDb) {
-    const dbDir = path.join(process.cwd(), 'data');
-    if (!fs.existsSync(dbDir)) {
-      fs.mkdirSync(dbDir, { recursive: true });
-    }
-
-    const sqlite = new Database(path.join(dbDir, 'ai-note.db'));
-    sqlite.pragma('journal_mode = WAL');
-    sqlite.pragma('foreign_keys = ON');
-    sqlite.pragma('busy_timeout = 10000');
-
-    sqlite.exec(`
-      CREATE TABLE IF NOT EXISTS users (
-        id TEXT PRIMARY KEY,
-        email TEXT NOT NULL UNIQUE,
-        password_hash TEXT NOT NULL,
-        name TEXT NOT NULL,
-        created_at INTEGER NOT NULL,
-        updated_at INTEGER NOT NULL
-      );
-      CREATE TABLE IF NOT EXISTS documents (
-        id TEXT PRIMARY KEY,
-        user_id TEXT NOT NULL,
-        title TEXT NOT NULL,
-        emoji TEXT,
-        cover_image TEXT,
-        tags TEXT,
-        last_accessed_at INTEGER NOT NULL
-      );
-      CREATE TABLE IF NOT EXISTS blocks (
-        id TEXT PRIMARY KEY,
-        document_id TEXT NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
-        type TEXT NOT NULL,
-        position INTEGER NOT NULL,
-        parent_id TEXT,
-        content TEXT,
-        attributes TEXT,
-        created_at INTEGER NOT NULL,
-        updated_at INTEGER NOT NULL,
-        author_id TEXT
-      );
-      CREATE TABLE IF NOT EXISTS block_embeddings (
-        block_id TEXT PRIMARY KEY REFERENCES blocks(id) ON DELETE CASCADE,
-        embedding BLOB NOT NULL,
-        updated_at INTEGER NOT NULL
-      );
-      CREATE TABLE IF NOT EXISTS chat_sessions (
-        id TEXT PRIMARY KEY,
-        user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-        title TEXT NOT NULL,
-        created_at INTEGER NOT NULL,
-        updated_at INTEGER NOT NULL
-      );
-      CREATE TABLE IF NOT EXISTS chat_messages (
-        id TEXT PRIMARY KEY,
-        session_id TEXT NOT NULL REFERENCES chat_sessions(id) ON DELETE CASCADE,
-        role TEXT NOT NULL,
-        content TEXT NOT NULL,
-        created_at INTEGER NOT NULL
-      );
-    `);
-
-    // Run migrations for existing databases
-    migrateDatabase(sqlite);
-
-    globalForDb.__aiNoteSqlite = sqlite;
-    globalForDb.__aiNoteDb = drizzle(sqlite, { schema });
-    globalForDb.__aiNoteSeeded = false;
-  }
-  return globalForDb.__aiNoteDb;
+// 扩展 NodeJS 全局类型，防止 TypeScript 报错
+declare global {
+  var _libsqlClient: Client | undefined;
 }
 
-export const db = getDb();
+let client: Client;
 
-export function ensureSeeded() {
-  if (globalForDb.__aiNoteSeeded) return;
-  const count = globalForDb.__aiNoteSqlite
-    .prepare('SELECT count(*) as c FROM documents')
-    .get() as { c: number };
-  if (count.c === 0) {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { seedDatabase } = require('./seed');
-    seedDatabase(globalForDb.__aiNoteSqlite);
+// 根据环境变量动态决定是否使用单例
+if (process.env.NODE_ENV === 'production') {
+  // 生产环境（Vercel Serverless）：每个无服务器实例独享一个客户端，直接创建
+  client = createClient({
+    url: process.env.TURSO_DATABASE_URL!,
+    authToken: process.env.TURSO_AUTH_TOKEN!,
+  });
+} else {
+  // 本地开发环境：使用全局对象缓存，防止 HMR 热更新导致无限创建连接
+  if (!globalThis._libsqlClient) {
+    globalThis._libsqlClient = createClient({
+      url: process.env.TURSO_DATABASE_URL!,
+      authToken: process.env.TURSO_AUTH_TOKEN!,
+    });
   }
-  globalForDb.__aiNoteSeeded = true;
+  client = globalThis._libsqlClient;
+}
+
+// 导出单例 Drizzle 实例
+export const db = drizzle(client, { schema });
+
+// 线上数据库已经有表结构和数据了，不需要再每次连接时建表和 seed
+export function ensureSeeded() {
+  console.log('[DB] Connected to Turso.');
 }

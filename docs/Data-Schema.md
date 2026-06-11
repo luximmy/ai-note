@@ -113,9 +113,37 @@ export interface Document {
 // 6. 用于 RAG 的上下文片段接口 (用于和向量数据库通信)
 export interface SearchResultFragment {
   blockId: string; // 精确到 Block 级别的召回
+  noteId: string; // 所属文档 ID，用于跳转
   score: number; // 向量搜索相似度分值
   content: string; // Block 的文本内容
   noteTitle: string; // 所属文档标题
+}
+
+// 7. 知识网络相关接口
+export interface Wikilink {
+  sourceId: string;
+  targetId: string; // 空字符串 = 幽灵链接（目标不存在）
+  targetTitle: string;
+  sourceTitle: string;
+  sourceEmoji?: string;
+  contextPreview: string;
+}
+
+export interface GraphNode {
+  id: string;
+  title: string;
+  emoji: string;
+  backlinkCount: number;
+}
+
+export interface GraphEdge {
+  source: string;
+  target: string;
+}
+
+export interface GraphData {
+  nodes: GraphNode[];
+  edges: GraphEdge[];
 }
 ```
 
@@ -129,6 +157,14 @@ export interface PendingInsert {
   type: BlockType;
   content: string;
   attributes?: Record<string, unknown>;
+}
+
+// AI 局部重写目标接口
+export interface RewriteTarget {
+  blockId: string;
+  text: string;
+  from: number; // 选区开始位置
+  to: number; // 选区结束位置
 }
 ```
 
@@ -217,6 +253,6 @@ interface ChatMessageRow {
 - `Block` 联合类型已纳入 `GenerativeUIBlock`，与编辑器运行时数据一致。
 - 动态注册表分发处仍保留局部、可审计的类型豁免；AI 组件 props 使用 `unknown` 边界，渲染前需通过白名单、normalize 或降级 UI 兜底。
 - 种子数据中 `doc_004` 使用了 `componentId: 'AlertCard'`，该组件未注册在 `AIComponentRegistry` 中，会触发未知组件降级 UI（amber 色块）。此为刻意行为，用于验证降级策略。
-- `PendingInsert` 接口定义在 `src/store/index.ts`（非 `types/index.ts`），是 Zustand 事件总线（`pendingInsertBlocks`）的载荷类型，用于 ChatPanel → BlockRenderer 的 AI 内容插入指令。详见上方「Store 相关类型」章节。
+- `PendingInsert` 和 `RewriteTarget` 接口定义在 `src/store/index.ts`（非 `types/index.ts`），分别是 Zustand 事件总线（`pendingInsertBlocks`）的载荷类型和 AI 局部重写的目标状态。详见上方「Store 相关类型」章节。
 - 数据库共 6 张表（users, documents, blocks, block_embeddings, chat_sessions, chat_messages），通过外键和 CASCADE 实现级联删除。
 - 认证系统基于 JWT + bcryptjs，SessionPayload 定义在 `src/lib/auth.ts`，不在 `types/index.ts` 中。

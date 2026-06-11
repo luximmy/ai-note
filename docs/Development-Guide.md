@@ -111,13 +111,24 @@ src/
 ### 4.2 测试文件
 
 ```
+src/app/app/note/[id]/
+├── error.test.tsx                    # 错误边界组件测试
+└── loading.test.tsx                  # 加载态组件测试
+
 src/components/editor/__tests__/
-├── BlockRenderer.test.tsx      # 保存成功/失败回滚
-├── GenerativeUIBlock.test.tsx  # streaming/error/未知组件/异常 props
-└── ...
+└── BlockRenderer.test.tsx            # 保存成功/失败回滚
+
+src/components/editor/blocks/__tests__/
+└── GenerativeUIBlock.utils.test.ts   # sanitizeProps + extractJsonFromStream（19 case）
+
+src/components/editor/blocks/
+└── GenerativeUIBlock.test.tsx        # streaming/error/未知组件/异常 props
 
 src/lib/__tests__/
-└── wikilink-parser.test.ts     # 12 个用例覆盖解析逻辑
+├── strip-html.test.ts                # stripHtml/markdownToHtml/ensureHtml（29 case）
+├── parse-markdown-to-blocks.test.ts  # Markdown → Block 解析（30 case）
+├── embedding-store.test.ts           # cosine/vecToBuffer/bufferToVec（11 case）
+└── wikilink-parser.test.ts           # 12 个用例覆盖解析逻辑
 ```
 
 ### 4.3 运行测试

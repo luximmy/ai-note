@@ -193,7 +193,7 @@ const globalForDb = globalThis as unknown as {
 
 - **幂等**：检查 `SELECT count(*) FROM documents`，有数据则跳过
 - **原子性**：整个插入过程在一个事务中执行
-- **自动触发**：`queries.ts` 模块加载时调用 `ensureSeeded()`
+- **自动触发**：`queries.ts` 模块加载时调用 `ensureSeeded()`，随后调用 `backfillMissingEmbeddings()` 补全缺失的 embedding 向量
 - **用户关联**：种子数据默认关联 `user_default` 用户，首个注册用户通过 `migrateDefaultUserDocuments()` 自动接管
 
 ## 7. Embedding 存储与搜索

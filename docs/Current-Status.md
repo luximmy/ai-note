@@ -3,16 +3,16 @@
 ## 1. 项目基本信息
 
 - **项目名称**：ai-note
-- **当前阶段**：阶段三全部完成；阶段四全部完成（拖拽排序 ✅ + AI 局部重写 ✅ + 知识网络 ✅ + 收尾打磨 ✅ + 暗色模式 ✅）；阶段五 RAG + Citations 已完成；阶段六真实数据层已完成；阶段七语义向量检索已完成；阶段八用户认证已完成；笔记增删 + AI 对话持久化已完成；Generative UI 重构 + AI 组件库 + 插入预览已完成
+- **当前阶段**：阶段三全部完成；阶段四全部完成（拖拽排序 ✅ + AI 局部重写 ✅ + 知识网络 ✅ + 收尾打磨 ✅ + 暗色模式 ✅）；阶段五 RAG + Citations 已完成；阶段六真实数据层已完成；阶段七语义向量检索已完成；阶段八用户认证已完成；笔记增删 + AI 对话持久化已完成；Generative UI 重构 + AI 组件库 + 插入预览已完成；数据库迁移至 Turso (libSQL) 已完成
 - **当前重心**：AI 功能体验重构 — Generative UI 真正可用、多种 AI 组件、选择性插入
-- **上次更新时间**：2026-05-29
+- **上次更新时间**：2026-06-11
 
 ## 2. 已完成里程碑 (Completed)
 
 - [x] **项目愿景与 PRD 确立**：`docs/Project-Vision-and-PRD.md` 已明确核心方向与 Mock-First 策略。
 - [x] **工程初始化完成**：Next.js App Router 项目已可运行，基础页面与布局已建立。
 - [x] **核心数据模型代码化**：`src/types/index.ts` 已完成 Block/Document 等核心类型定义。
-- [x] **首批 Mock 数据落地**：`src/mock/data.ts` 已基于 Schema 提供可用文档与区块样本。
+- [x] **首批 Mock 数据落地**：初期基于 Schema 提供可用文档与区块样本（后已替换为真实 SQLite 数据）。
 - [x] **Mock Server Actions 落地**：`src/actions/note.ts` 已实现带延迟/失败率的获取与更新接口。
 - [x] **三栏布局骨架完成**：`src/app/app/layout.tsx` 已实现 Sidebar / Editor / Agent Panel 框架。
 - [x] **笔记列表首页完成**：`src/app/app/page.tsx` 已实现笔记列表入口页面。
@@ -22,7 +22,7 @@
 - [x] **错误语义分流完成**：详情页已仅在“404 笔记不存在”时走 `notFound()`，其余异常进入 `error.tsx` 并支持重试。
 - [x] **区块保存与失败回滚已接入**：`src/components/editor/BlockRenderer.tsx` 已接入 `updateBlockAction`、防抖提交、失败回滚与 `router.refresh()` 对齐。
 - [x] **编辑链路稳态化（阶段一）完成**：已完成块级防抖、挂起更新合并缓冲区、卸载清理与局部回滚对齐。
-- [x] **侧栏数据联动完成**：`src/app/app/layout.tsx` 已基于 `mockDocuments` 动态渲染列表，支持当前路由高亮与跳转。
+- [x] **侧栏数据联动完成**：`src/app/app/layout.tsx` 已基于 DB 查询（`getAllDocumentsMeta`）动态渲染列表，支持当前路由高亮与跳转（原 mockDocuments 已替换为真实数据）。
 - [x] **Todo 区块渲染接入完成**：`BlockRenderer` 已注册 `todo`，并新增 `TodoBlock` 组件。
 - [x] **`generative_ui` 渲染闭环完成**：`BlockRenderer` 已注册 `generative_ui`，并接入 `GenerativeUIBlock` 的 streaming/error/completed 三态渲染。
 - [x] **并发提交乱序防护完成**：区块保存链路已引入请求序号（`requestSeqRef` + `lastResolvedVersionRef`），旧响应不会覆盖新状态。
@@ -45,7 +45,7 @@
 - [x] **Generative UI 联动完成（任务 3.5）**：AI system prompt 引导返回 TaskBoard 结构化 JSON，`GenerativeUIBlock` 支持 `onUpdateProps` 回调，`TaskBoard` 支持点击循环切换任务状态（todo → in-progress → done），状态变更同步回编辑器 attributes。
 - [x] **SlashMenu 增强**：`SlashMenuItem` 接口新增 `content?` 和 `attributes?` 字段，支持插入时携带初始内容与属性。
 - [x] **AI 错误处理完善**：`ChatPanel` 新增 `sonner` toast 错误通知 + 内联错误 UI（红色警告卡片 + "重新生成"按钮），API Route 返回结构化 JSON 错误响应。
-- [x] **Edge Runtime 声明**：`/api/chat` Route Handler 显式声明 `export const runtime = 'edge'`，优化流式输出性能。
+- [x] **Runtime 策略**：`/api/chat` 和 `/api/generate-ui` 使用 Node.js Runtime（访问数据库）；`/api/rewrite` 使用 Edge Runtime（不访问数据库，优化流式输出性能）。
 - [x] **Vercel 部署完成（任务 3.7）**：环境变量已配置，streaming 在 Edge Runtime 下正常工作，live demo 已上线。
 - [x] **Block 删除 + 拖拽排序完成（任务 4.1）**：`@dnd-kit` 集成，`SortableBlockItem` 包裹每个区块提供拖拽手柄与删除按钮；`DragOverlay` 悬浮层实现丝滑拖拽体验；`deleteBlockAction` + `reorderBlocksAction` 沿用双缓冲 + 回滚架构，拖拽/删除均支持乐观更新与失败恢复。
 - [x] **AI 局部重写完成（任务 4.2）**：选中文字后浮现浮动工具栏（智能润色/扩写/精简/翻译/自定义指令），`/api/rewrite` Edge API 调用 DeepSeek 流式返回改写结果，`RichTextEditor` 逐 token 原位替换（300ms 选区防抖 + 延迟删除避免空白闪烁 + loading 态过渡），完成触发保存同步 + toast 反馈，失败支持 Ctrl+Z 撤销恢复。
@@ -68,6 +68,7 @@
 - [x] **Bug 修复：笔记列表新建/删除不刷新**：`AppShell` 的 `localDocuments` 初始为空数组导致合并逻辑失效，改为初始化为 `initialDocuments` + `useEffect` 同步。
 - [x] **Bug 修复：批量插入顺序反转**：所有 block 引用同一个 `lastBlockId` 导致并行插入后顺序反转，改为链式串行插入。
 - [x] **核心 lib 层测试覆盖**：新增 4 个测试文件（89 个 test case）。`strip-html.test.ts`（29 case）覆盖 `stripHtml`/`markdownToHtml`/`ensureHtml` 的 HTML 实体解码、br 转换、行内 markdown 语法、段落包裹等边界；`parse-markdown-to-blocks.test.ts`（30 case）覆盖标题/代码块/JSON 代码块/Todo/列表/分割线/引用块/段落的解析及混合内容；`embedding-store.test.ts`（11 case）覆盖 `cosine` 相似度（正交/反向/零向量/高维）、`vecToBuffer`/`bufferToVec` round-trip 精度；`GenerativeUIBlock.utils.test.ts`（19 case）覆盖 `sanitizeProps` 类型防护和 `extractJsonFromStream` 流式 JSON 提取。`GenerativeUIBlock.tsx` 导出 `sanitizeProps` 和 `extractJsonFromStream` 供独立测试。
+- [x] **数据库迁移至 Turso (libSQL)（任务 10.1）**：将数据持久化层从 `better-sqlite3`（本地文件）迁移至 `@libsql/client`（Turso 云端 libSQL）。`src/db/index.ts` 重写连接逻辑 — 生产环境直连 Turso（`TURSO_DATABASE_URL` + `TURSO_AUTH_TOKEN`），开发环境使用 `globalThis` 单例防止 HMR 无限创建连接；删除 `src/db/migrate.ts`（Turso 线上已有表结构，无需每次迁移）、`src/db/seed.ts`、`src/db/seed-data.ts`（700 行 mock 数据）；`src/db/queries.ts` 所有 DB 调用从同步改为 `async/await`（libsql 为异步 API），`reorderBlocks` 事务改用 `async (tx) =>` 回调；`src/lib/embedding-store.ts` 适配 libSQL 返回的 `ArrayBuffer` 类型（`bufferToVec` 兼容处理）+ 所有调用改为 async；`package.json` 移除 `better-sqlite3`，新增 `@libsql/client`；7 篇文档同步更新。
 
 ## 3. 进行中的任务 (In Progress)
 
@@ -89,7 +90,7 @@
 
 ## 5. 关键备注 (Context Memo)
 
-- **当前进展结论**：阶段八已完成，用户认证系统已交付。邮箱密码登录 + JWT Session（jose 库）+ 按用户隔离数据。密码使用 bcryptjs 加密，JWT 存储在 httpOnly cookie（7 天有效期）。middleware 保护 /app/* 路由，未登录重定向到 /login。
+- **当前进展结论**：数据库已从 better-sqlite3 迁移至 Turso (libSQL)，支持 Vercel Serverless 部署。删除了 migrate/seed 文件（线上已有数据），所有 DB 调用改为 async/await。需配置 `TURSO_DATABASE_URL` 和 `TURSO_AUTH_TOKEN` 环境变量。
 - **下一步方向**：可考虑协作编辑、多模态输入、移动端适配、OAuth 社交登录等。需配置 `AUTH_SECRET` 环境变量才能启用认证。
 
 ## 6. 技术栈接入状态澄清
@@ -101,5 +102,5 @@
 | **Vercel AI SDK** (`ai` / `@ai-sdk/react` / `@ai-sdk/openai`) | AI 交互引擎 | **已接入** | `route.ts` 使用 `streamText` + `createOpenAI` 调用 DeepSeek；`ChatPanel.tsx` 使用 `useChat` + `DefaultChatTransport`。 |
 | **Zustand** | 跨组件全局状态 | **已接入，扩展为 Agent ↔ Editor 事件总线** | Store 管理侧边栏/面板开关 + `noteContext`（笔记上下文）+ `pendingInsertBlocks`（AI → 编辑器插入指令）。 |
 | **react-markdown + remark-gfm** | AI 回复富文本渲染 | **已接入** | `ChatPanel` 使用 `ReactMarkdown` 渲染 AI 回复，支持 GFM 语法（表格、任务列表等），配合 `@tailwindcss/typography` 样式。 |
-| **Drizzle ORM + better-sqlite3** | 数据持久化层 | **已接入** | `src/db/schema.ts` 定义 documents/blocks/block_embeddings 三张表；`src/db/queries.ts` 提供 7 个 CRUD 函数 + embedding 挂载；`src/db/seed.ts` 幂等填充种子数据；WAL 模式 + busy_timeout。 |
+| **Drizzle ORM + @libsql/client (Turso)** | 数据持久化层 | **已接入** | `src/db/schema.ts` 定义 6 张表（users, documents, blocks, block_embeddings, chat_sessions, chat_messages）；`src/db/queries.ts` 提供用户 + 文档 + 区块 + 聊天 CRUD 函数 + embedding 挂载（全部 async/await）；生产环境连接 Turso 云端 libSQL，开发环境 globalThis 单例防 HMR。 |
 | **DashScope Qwen3 Embedding** | 语义向量检索 | **已接入** | `src/lib/embedding.ts` 调用 DashScope OpenAI 兼容 API 生成 1024 维向量；`src/lib/embedding-store.ts` 存储在 SQLite BLOB + JS 余弦相似度搜索；block 保存时 fire-and-forget 增量更新。 |

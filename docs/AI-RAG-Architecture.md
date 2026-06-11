@@ -95,6 +95,8 @@ src/db/queries.ts          ← block 写入时触发 embedAndStoreBlock (fire-an
 
 **存储**：`Float32Array` → `Buffer` → SQLite BLOB（4KB/行）
 
+**批量 Embedding**：`embedBatch(texts)` 函数用于启动时 backfill，按 6 条一批处理，批次间 200ms 延迟以避免 API 限流。
+
 ### 4.3 搜索流程
 
 ```

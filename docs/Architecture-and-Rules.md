@@ -33,10 +33,10 @@ ai-note/
 │   │       ├── generate-ui/ #     AI 组件生成 streaming 端点
 │   │       └── rewrite/     #     AI 局部重写 streaming 端点
 │   ├── components/          # 视图层
-│   │   ├── ai/              #   AI 组件 (ChatPanel, TaskBoard, DataTable, MermaidDiagram, Timeline, InsertPreview)
+│   │   ├── ai/              #   AI 组件 (ChatPanel, CitationChip, CitationSources, InsertPreview, TaskBoard, DataTable, MermaidDiagram, Timeline)
 │   │   ├── editor/          #   编辑器核心 (BlockRenderer, RichTextEditor, SlashMenu, RewriteToolbar)
 │   │   │   ├── blocks/      #     区块组件 (ParagraphBlock, HeadingBlock, CodeBlock, TodoBlock, GenerativeUIBlock)
-│   │   │   ├── extensions/  #     ProseMirror 插件 (wikilink-decoration)
+│   │   │   ├── extensions/  #     ProseMirror 插件 (wikilink-decoration, rewrite-highlight)
 │   │   │   └── __tests__/   #     编辑器测试
 │   │   ├── knowledge/       #   知识网络 (GraphView, BacklinksPanel)
 │   │   ├── layout/          #   布局组件 (AppShell)
@@ -56,7 +56,8 @@ ai-note/
 │   │   ├── parse-markdown-to-blocks.ts # Markdown → Block 解析引擎
 │   │   ├── strip-html.ts    #   HTML ↔ 纯文本转换
 │   │   ├── wikilink-parser.ts # [[wikilink]] 解析
-│   │   └── telemetry.ts     #   保存事件埋点
+│   │   ├── telemetry.ts     #   保存事件埋点
+│   │   └── utils.ts         #   通用工具函数 (cn 等)
 │   ├── store/               # Zustand 全局状态定义
 │   └── types/               # TypeScript 全局接口定义 (如 Block Schema)
 └── pnpm-lock.yaml           # 锁定依赖版本
@@ -86,7 +87,7 @@ ai-note/
 
 ### 3.2 状态管理与乐观更新 (Optimistic UI)
 
-- **全局状态**: 仅用于不常变动或需要跨越极大组件树的状态（如：侧边栏折叠状态、当前激活的笔记 ID、笔记上下文 `noteContext`）。统一放在 `src/store` 使用 Zustand 管理。`noteContext` 由编辑器实时同步，供 AI Chat 注入对话上下文。
+- **全局状态**: 仅用于不常变动或需要跨越极大组件树的状态（如：侧边栏折叠状态、Agent 面板开关、当前激活的笔记 ID、笔记上下文 `noteContext`、AI 局部重写目标 `rewriteTarget`）。统一放在 `src/store` 使用 Zustand 管理。`noteContext` 由编辑器实时同步，供 AI Chat 注入对话上下文。
 - **高频交互状态（场景化选型）**: 严禁将高频交互直接挂在全局状态上；按”离散事务”与”连续编辑”区分策略：
   1. **离散原子操作**（点赞、勾选、单次提交）：优先使用 `useTransition + useOptimistic`。
   2. **连续输入编辑**（富文本打字、IME 合成、防抖保存）：优先使用”双缓冲状态（active state + safe snapshot）+ 防抖提交 + 失败回滚”。

@@ -1,3 +1,4 @@
+// src/db/queries.ts
 import { db, ensureSeeded } from './index';
 import {
   users,
@@ -8,14 +9,16 @@ import {
   chatMessages,
 } from './schema';
 import { eq, asc, and, desc } from 'drizzle-orm';
-import { embedAndStoreBlock, backfillMissingEmbeddings } from '@/lib/embedding-store';
+import {
+  embedAndStoreBlock,
+  backfillMissingEmbeddings,
+} from '@/lib/embedding-store';
 
-// Seed database on first module load (idempotent)
 ensureSeeded();
-// Backfill embeddings for blocks that don't have them yet
 backfillMissingEmbeddings().catch((err) =>
   console.error('[Embedding] Backfill failed:', err),
 );
+
 import type {
   Document,
   Block,
@@ -25,8 +28,6 @@ import type {
   TodoBlock,
   GenerativeUIBlock,
 } from '@/types';
-
-// ─── Internal helpers ───
 
 interface BlockRow {
   id: string;
@@ -56,7 +57,11 @@ function dbRowToBlock(row: BlockRow): Block {
 
   switch (row.type) {
     case 'paragraph':
-      return { ...base, type: 'paragraph', attributes: attrs } as ParagraphBlock;
+      return {
+        ...base,
+        type: 'paragraph',
+        attributes: attrs,
+      } as ParagraphBlock;
     case 'heading':
       return { ...base, type: 'heading', attributes: attrs } as HeadingBlock;
     case 'code':
@@ -83,9 +88,6 @@ function parseTags(tagsJson: string | null): string[] {
   }
 }
 
-// ─── Exported query functions ───
-
-// User queries
 export async function createUser(
   id: string,
   email: string,
@@ -93,7 +95,8 @@ export async function createUser(
   name: string,
   now: number,
 ): Promise<void> {
-  db.insert(users)
+  await db
+    .insert(users)
     .values({
       id,
       email,
@@ -106,26 +109,17 @@ export async function createUser(
 }
 
 export async function getUserByEmail(email: string) {
-  return db
-    .select()
-    .from(users)
-    .where(eq(users.email, email))
-    .get();
+  return await db.select().from(users).where(eq(users.email, email)).get();
 }
 
 export async function getUserById(id: string) {
-  return db
-    .select()
-    .from(users)
-    .where(eq(users.id, id))
-    .get();
+  return await db.select().from(users).where(eq(users.id, id)).get();
 }
 
-// Document queries (with user isolation)
 export async function getAllDocumentsMeta(
   userId: string,
 ): Promise<Pick<Document, 'id' | 'title' | 'emoji'>[]> {
-  const rows = db
+  const rows = await db
     .select({
       id: documents.id,
       title: documents.title,
@@ -134,6 +128,7 @@ export async function getAllDocumentsMeta(
     .from(documents)
     .where(eq(documents.userId, userId))
     .all();
+
   return rows.map((r) => ({
     id: r.id,
     title: r.title,
@@ -145,19 +140,19 @@ export async function getDocumentById(
   id: string,
   userId: string,
 ): Promise<Document | null> {
-  const doc = db
+  const doc = await db
     .select()
     .from(documents)
     .where(and(eq(documents.id, id), eq(documents.userId, userId)))
     .get();
   if (!doc) return null;
 
-  const blockRows = db
+  const blockRows = (await db
     .select()
     .from(blocks)
     .where(eq(blocks.documentId, id))
     .orderBy(asc(blocks.position))
-    .all() as BlockRow[];
+    .all()) as BlockRow[];
 
   return {
     id: doc.id,
@@ -167,23 +162,23 @@ export async function getDocumentById(
     tags: parseTags(doc.tags),
     lastAccessedAt: doc.lastAccessedAt,
     blocks: blockRows.map(dbRowToBlock),
-    backlinks: [], // Computed at runtime by caller (getBacklinksForNote)
+    backlinks: [],
   };
 }
 
 export async function getAllDocumentsWithBlocks(
   userId: string,
 ): Promise<Document[]> {
-  const docs = db
+  const docs = await db
     .select()
     .from(documents)
     .where(eq(documents.userId, userId))
     .all();
-  const allBlocks = db
+  const allBlocks = (await db
     .select()
     .from(blocks)
     .orderBy(asc(blocks.position))
-    .all() as BlockRow[];
+    .all()) as BlockRow[];
 
   const blocksByDoc = new Map<string, BlockRow[]>();
   for (const b of allBlocks) {
@@ -211,7 +206,8 @@ export async function createDocument(
   emoji?: string,
 ): Promise<void> {
   const now = Date.now();
-  db.insert(documents)
+  await db
+    .insert(documents)
     .values({
       id,
       userId,
@@ -223,8 +219,8 @@ export async function createDocument(
     })
     .run();
 
-  // Create a default empty paragraph block
-  db.insert(blocks)
+  await db
+    .insert(blocks)
     .values({
       id: `${id}_block_${now}`,
       documentId: id,
@@ -240,24 +236,22 @@ export async function createDocument(
     .run();
 }
 
-export async function migrateDefaultUserDocuments(userId: string): Promise<number> {
+export async function migrateDefaultUserDocuments(
+  userId: string,
+): Promise<number> {
   const DEFAULT_USER_ID = 'user_default';
-
-  // Check if there are documents under user_default
-  const defaultDocs = db
+  const defaultDocs = await db
     .select()
     .from(documents)
     .where(eq(documents.userId, DEFAULT_USER_ID))
     .all();
-
   if (defaultDocs.length === 0) return 0;
 
-  // Transfer documents to the new user
-  db.update(documents)
+  await db
+    .update(documents)
     .set({ userId })
     .where(eq(documents.userId, DEFAULT_USER_ID))
     .run();
-
   return defaultDocs.length;
 }
 
@@ -265,15 +259,15 @@ export async function deleteDocument(
   id: string,
   userId: string,
 ): Promise<boolean> {
-  const doc = db
+  const doc = await db
     .select()
     .from(documents)
     .where(and(eq(documents.id, id), eq(documents.userId, userId)))
     .get();
   if (!doc) return false;
 
-  // Delete all blocks and embeddings (CASCADE handles this, but explicit is clearer)
-  db.delete(blockEmbeddings)
+  await db
+    .delete(blockEmbeddings)
     .where(
       eq(
         blockEmbeddings.blockId,
@@ -284,8 +278,8 @@ export async function deleteDocument(
       ),
     )
     .run();
-  db.delete(blocks).where(eq(blocks.documentId, id)).run();
-  db.delete(documents).where(eq(documents.id, id)).run();
+  await db.delete(blocks).where(eq(blocks.documentId, id)).run();
+  await db.delete(documents).where(eq(documents.id, id)).run();
   return true;
 }
 
@@ -294,14 +288,15 @@ export async function updateDocument(
   userId: string,
   updates: { title?: string; emoji?: string },
 ): Promise<boolean> {
-  const doc = db
+  const doc = await db
     .select()
     .from(documents)
     .where(and(eq(documents.id, id), eq(documents.userId, userId)))
     .get();
   if (!doc) return false;
 
-  db.update(documents)
+  await db
+    .update(documents)
     .set({
       ...(updates.title !== undefined && { title: updates.title }),
       ...(updates.emoji !== undefined && { emoji: updates.emoji }),
@@ -317,7 +312,7 @@ export async function updateBlock(
   blockId: string,
   updates: Partial<Block>,
 ): Promise<void> {
-  const existing = db
+  const existing = await db
     .select()
     .from(blocks)
     .where(eq(blocks.id, blockId))
@@ -331,16 +326,17 @@ export async function updateBlock(
       })
     : existing.attributes;
 
-  db.update(blocks)
+  await db
+    .update(blocks)
     .set({
-      content: updates.content !== undefined ? updates.content : existing.content,
+      content:
+        updates.content !== undefined ? updates.content : existing.content,
       attributes: mergedAttributes,
       updatedAt: Date.now(),
     })
     .where(eq(blocks.id, blockId))
     .run();
 
-  // Re-embed if content changed (fire-and-forget)
   if (updates.content !== undefined && updates.content) {
     embedAndStoreBlock(blockId, updates.content).catch((err) =>
       console.error('[Embedding] Update failed for block', blockId, err),
@@ -353,17 +349,14 @@ export async function addBlock(
   afterBlockId: string,
   newBlock: Block,
 ): Promise<void> {
-  // Find the position of the afterBlock
-  const afterBlock = db
+  const afterBlock = await db
     .select({ position: blocks.position })
     .from(blocks)
     .where(eq(blocks.id, afterBlockId))
     .get();
-
   const insertPosition = afterBlock ? afterBlock.position + 1 : 0;
 
-  // Shift all blocks at or after insertPosition up by 1
-  const allBlocks = db
+  const allBlocks = await db
     .select({ id: blocks.id, position: blocks.position })
     .from(blocks)
     .where(eq(blocks.documentId, noteId))
@@ -371,7 +364,8 @@ export async function addBlock(
 
   for (const b of allBlocks) {
     if (b.position >= insertPosition) {
-      db.update(blocks)
+      await db
+        .update(blocks)
         .set({ position: b.position + 1 })
         .where(eq(blocks.id, b.id))
         .run();
@@ -379,7 +373,8 @@ export async function addBlock(
   }
 
   const now = Date.now();
-  db.insert(blocks)
+  await db
+    .insert(blocks)
     .values({
       id: newBlock.id,
       documentId: noteId,
@@ -387,14 +382,15 @@ export async function addBlock(
       position: insertPosition,
       parentId: newBlock.parentId ?? null,
       content: newBlock.content ?? null,
-      attributes: newBlock.attributes ? JSON.stringify(newBlock.attributes) : null,
+      attributes: newBlock.attributes
+        ? JSON.stringify(newBlock.attributes)
+        : null,
       createdAt: newBlock.metadata?.createdAt ?? now,
       updatedAt: newBlock.metadata?.updatedAt ?? now,
       authorId: newBlock.metadata?.authorId ?? null,
     })
     .run();
 
-  // Embed new block (fire-and-forget)
   if (newBlock.content) {
     embedAndStoreBlock(newBlock.id, newBlock.content).catch((err) =>
       console.error('[Embedding] Create failed for block', newBlock.id, err),
@@ -406,19 +402,20 @@ export async function deleteBlock(
   noteId: string,
   blockId: string,
 ): Promise<void> {
-  const target = db
+  const target = await db
     .select({ position: blocks.position })
     .from(blocks)
     .where(eq(blocks.id, blockId))
     .get();
   if (!target) return;
 
-  db.delete(blocks).where(eq(blocks.id, blockId)).run();
-  // Explicitly delete embedding (CASCADE also handles this)
-  db.delete(blockEmbeddings).where(eq(blockEmbeddings.blockId, blockId)).run();
+  await db.delete(blocks).where(eq(blocks.id, blockId)).run();
+  await db
+    .delete(blockEmbeddings)
+    .where(eq(blockEmbeddings.blockId, blockId))
+    .run();
 
-  // Shift blocks after the deleted one down by 1
-  const remaining = db
+  const remaining = await db
     .select({ id: blocks.id, position: blocks.position })
     .from(blocks)
     .where(eq(blocks.documentId, noteId))
@@ -426,7 +423,8 @@ export async function deleteBlock(
 
   for (const b of remaining) {
     if (b.position > target.position) {
-      db.update(blocks)
+      await db
+        .update(blocks)
         .set({ position: b.position - 1 })
         .where(eq(blocks.id, b.id))
         .run();
@@ -438,9 +436,10 @@ export async function reorderBlocks(
   noteId: string,
   blockIds: string[],
 ): Promise<void> {
-  db.transaction(() => {
+  await db.transaction(async (tx) => {
     for (let i = 0; i < blockIds.length; i++) {
-      db.update(blocks)
+      await tx
+        .update(blocks)
         .set({ position: i })
         .where(eq(blocks.id, blockIds[i]))
         .run();
@@ -448,27 +447,20 @@ export async function reorderBlocks(
   });
 }
 
-// ─── Chat history queries ───
-
 export async function createChatSession(
   id: string,
   userId: string,
   title: string,
 ): Promise<void> {
   const now = Date.now();
-  db.insert(chatSessions)
-    .values({
-      id,
-      userId,
-      title,
-      createdAt: now,
-      updatedAt: now,
-    })
+  await db
+    .insert(chatSessions)
+    .values({ id, userId, title, createdAt: now, updatedAt: now })
     .run();
 }
 
 export async function getChatSessions(userId: string) {
-  return db
+  return await db
     .select()
     .from(chatSessions)
     .where(eq(chatSessions.userId, userId))
@@ -477,7 +469,7 @@ export async function getChatSessions(userId: string) {
 }
 
 export async function getChatSession(id: string, userId: string) {
-  return db
+  return await db
     .select()
     .from(chatSessions)
     .where(and(eq(chatSessions.id, id), eq(chatSessions.userId, userId)))
@@ -489,7 +481,8 @@ export async function updateChatSessionTitle(
   userId: string,
   title: string,
 ): Promise<void> {
-  db.update(chatSessions)
+  await db
+    .update(chatSessions)
     .set({ title, updatedAt: Date.now() })
     .where(and(eq(chatSessions.id, id), eq(chatSessions.userId, userId)))
     .run();
@@ -499,15 +492,15 @@ export async function deleteChatSession(
   id: string,
   userId: string,
 ): Promise<boolean> {
-  const session = db
+  const session = await db
     .select()
     .from(chatSessions)
     .where(and(eq(chatSessions.id, id), eq(chatSessions.userId, userId)))
     .get();
   if (!session) return false;
 
-  db.delete(chatMessages).where(eq(chatMessages.sessionId, id)).run();
-  db.delete(chatSessions).where(eq(chatSessions.id, id)).run();
+  await db.delete(chatMessages).where(eq(chatMessages.sessionId, id)).run();
+  await db.delete(chatSessions).where(eq(chatSessions.id, id)).run();
   return true;
 }
 
@@ -517,25 +510,19 @@ export async function addChatMessage(
   role: string,
   content: string,
 ): Promise<void> {
-  db.insert(chatMessages)
-    .values({
-      id,
-      sessionId,
-      role,
-      content,
-      createdAt: Date.now(),
-    })
+  await db
+    .insert(chatMessages)
+    .values({ id, sessionId, role, content, createdAt: Date.now() })
     .run();
-
-  // Update session's updatedAt
-  db.update(chatSessions)
+  await db
+    .update(chatSessions)
     .set({ updatedAt: Date.now() })
     .where(eq(chatSessions.id, sessionId))
     .run();
 }
 
 export async function getChatMessages(sessionId: string) {
-  return db
+  return await db
     .select()
     .from(chatMessages)
     .where(eq(chatMessages.sessionId, sessionId))

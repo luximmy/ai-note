@@ -1,3 +1,43 @@
+# 2026-06-11 工作日志
+
+## 数据库迁移至 Turso (libSQL) ✅
+
+**目标**：将数据持久化层从本地 better-sqlite3 迁移至 Turso 云端 libSQL，支持 Vercel Serverless 部署。
+
+**实现内容**：
+
+1. **数据库连接重写**
+   - `src/db/index.ts` — `better-sqlite3` 替换为 `@libsql/client`；生产环境直连 Turso（`TURSO_DATABASE_URL` + `TURSO_AUTH_TOKEN`），开发环境 `globalThis` 单例防止 HMR 热更新无限创建连接；移除内联建表 SQL（Turso 线上已有表结构）
+
+2. **删除冗余文件**
+   - `src/db/migrate.ts` — 删除（Turso 线上已有完整 schema，无需每次连接时迁移）
+   - `src/db/seed.ts` — 删除（线上已有数据）
+   - `src/db/seed-data.ts` — 删除（700 行 mock 种子数据）
+
+3. **全量 async/await 改写**
+   - `src/db/queries.ts` — 所有 DB 调用从同步改为 `await`（libsql 为异步 API），`reorderBlocks` 事务改用 `async (tx) =>` 回调；移除冗余注释
+   - `src/lib/embedding-store.ts` — `bufferToVec` 适配 libSQL 返回的 `ArrayBuffer` 类型；所有 DB 调用改为 async；移除冗余注释
+
+4. **依赖更新**
+   - `package.json` — 移除 `better-sqlite3`，新增 `@libsql/client: ^0.17.3`
+   - `pnpm-lock.yaml` — 锁文件更新
+
+5. **文档同步**（7 篇）
+   - `Current-Status.md` — 新增迁移里程碑 + 更新技术栈表 + 更新上下文备注
+   - `Architecture-and-Rules.md` — 更新目录树（新增组件、utils.ts）+ 全局状态说明补充
+   - `Data-Schema.md` — 新增 Wikilink/GraphData/RewriteTarget 接口定义
+   - `Database-Architecture.md` — 更新 seed 触发说明
+   - `Development-Guide.md` — 更新测试文件列表
+   - `AI-RAG-Architecture.md` — 补充批量 Embedding 说明
+   - `Project-Deep-Dive.md` — 更新文件行数
+
+**技术决策**：
+- 选择 Turso (libSQL) 而非其他方案：兼容 SQLite 生态（Drizzle ORM 无缝切换）、原生支持 Serverless（HTTP 连接）、免费额度充足
+- 生产/开发环境分离连接策略：生产环境每次创建新 client（Serverless 实例独立），开发环境 globalThis 缓存（防止 Next.js HMR 导致连接泄漏）
+- 删除 seed/migrate 而非保留：Turso 线上已有完整数据和 schema，保留迁移逻辑反而增加连接启动时间
+
+---
+
 # 2026-06-01 工作日志
 
 ## AI Rewrite 工具栏修复与增强 ✅
